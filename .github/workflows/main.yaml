@@ -33,4 +33,4 @@ jobs:
           --runtime=python38
           --trigger-http
           --service-account=${{ secrets.GCP_SA }}
-          --set-env-vars=CLIENT_ID=${{ secrets.CLIENT_ID }},CLIENT_SECRET=${{ secrets.CLIENT_SECRET }},REFRESH_TOKEN=${{ secrets.REFRESH_TOKEN }}PROJECT_ID=${{ secrets.PROJECT_ID }},TOPIC_ID=${{ env.TOPIC_ID }}
+          --set-env-vars=CLIENT_ID=${{ secrets.CLIENT_ID }},CLIENT_SECRET=${{ secrets.CLIENT_SECRET }},REFRESH_TOKEN=${{ secrets.REFRESH_TOKEN }},PROJECT_ID=${{ secrets.PROJECT_ID }},TOPIC_ID=${{ env.TOPIC_ID }}
