@@ -1,34 +1,98 @@
 import os
-import sys
-import json
-import itertools
 from datetime import datetime, timedelta
 from abc import abstractmethod, ABCMeta
 
 import requests
-
-# if sys.platform == "win32":
-# asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+from google.cloud import bigquery
+import jinja2
 
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 REFRESH_TOKEN = os.getenv("REFRESH_TOKEN")
 
+TEMPLATE_LOADER = jinja2.FileSystemLoader(searchpath="./templates")
+TEMPLATE_ENV = jinja2.Environment(loader=TEMPLATE_LOADER)
+
+
+def create_headers():
+    params = {
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "refresh_token": REFRESH_TOKEN,
+        "grant_type": "refresh_token",
+    }
+    with requests.post("https://oauth2.googleapis.com/token", params=params) as r:
+        access_token = r.json().get("access_token")
+    return {
+        "Authorization": "Bearer " + access_token,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
 
 class UAReports(metaclass=ABCMeta):
-    def __init__(self, ga_view_id, start, end):
-        self.ga_view_id = ga_view_id
+    def __init__(
+        self,
+        sessions,
+        bq_client,
+        headers,
+        accounts,
+        properties,
+        views,
+        view_id,
+        start,
+        end,
+    ):
+        self.sessions = sessions
+        self.bq_client = bq_client
+        self.headers = headers
+        self.accounts = accounts
+        self.properties = properties
+        self.views = views
+        self.view_id = view_id
         self.start = start
         self.end = end
         self.dimensions = self.get_dimensions()
         self.metrics = self.get_metrics()
+        self.job_ts = datetime.now().isoformat()
 
     @staticmethod
-    def create(ga_view_id, mode, start, end):
+    def create(
+        sessions,
+        bq_client,
+        headers,
+        accounts,
+        properties,
+        views,
+        view_id,
+        mode,
+        start=None,
+        end=None,
+    ):
         if mode == "demographics":
-            return DemographicsReport(ga_view_id, start, end)
+            return DemographicsReport(
+                sessions,
+                bq_client,
+                headers,
+                accounts,
+                properties,
+                views,
+                view_id,
+                start,
+                end,
+            )
         elif mode == "acquisitions":
-            return AcquisitionsReport(ga_view_id, start, end)
+            return AcquisitionsReport(
+                sessions,
+                bq_client,
+                headers,
+                accounts,
+                properties,
+                views,
+                view_id,
+                start,
+                end,
+            )
         else:
             raise NotImplementedError
 
@@ -63,7 +127,7 @@ class UAReports(metaclass=ABCMeta):
                 "startDate": self.start,
                 "endDate": self.end,
             },
-            "viewId": self.ga_view_id,
+            "viewId": self.view_id,
             "dimensions": [
                 {"name": f"ga:{dimension}"} for dimension in self.dimensions
             ],
@@ -73,7 +137,7 @@ class UAReports(metaclass=ABCMeta):
 
     def fetch(self):
         rows = []
-        payload = {"reportRequests": [report.make_requests() for report in self.reports]}
+        payload = {"reportRequests": [self.make_requests()]}
         url = "https://analyticsreporting.googleapis.com/v4/reports:batchGet"
         while True:
             with self.sessions.post(
@@ -82,22 +146,127 @@ class UAReports(metaclass=ABCMeta):
                 json=payload,
             ) as r:
                 res = r.json()
-            report = res['reports'][0]
-            column_header = report['columnHeader']
-            data = report['data']
-            _rows = data['rows']
+                res
+            report = res["reports"][0]
+            column_header = report["columnHeader"]
+            data = report["data"]
+            _rows = data["rows"]
             rows.extend(_rows)
-            next_page_token = data.get('nextPageToken', None)
+            next_page_token = data.get("nextPageToken", None)
             if next_page_token:
-                payload['reportRequests'][0]['pageToken'] = next_page_token
+                payload["reportRequests"][0]["pageToken"] = next_page_token
             else:
                 break
         return column_header, rows
 
+    def transform(self, column_headers, _rows):
+        dimension_headers = column_headers["dimensions"]
+        metric_headers = column_headers["metricHeader"]["metricHeaderEntries"]
+        dimension_headers = [
+            (lambda x: x.replace("ga:", ""))(i) for i in dimension_headers
+        ]
+        metric_headers = [
+            (lambda x: x["name"].replace("ga:", ""))(i) for i in metric_headers
+        ]
+
+        rows = []
+        for row in _rows:
+            dimension_values = dict(zip(dimension_headers, row["dimensions"]))
+            metric_values = dict(zip(metric_headers, row["metrics"][0]["values"]))
+            dimension_values["date"] = datetime.strptime(
+                dimension_values["date"], "%Y%m%d"
+            ).strftime("%Y-%m-%d")
+            rows.append(
+                {**dimension_values, **metric_values, **{"_batched_at": self.job_ts}}
+            )
+        self.num_processed = len(rows)
+        return rows
+
+    def load(self, rows):
+        dataset = self.create_dataset()
+        table = self.get_table()
+        schema = self.get_schema()
+        return self.bq_client.load_table_from_json(
+            rows,
+            f"{dataset}._stage_{table}",
+            job_config=bigquery.LoadJobConfig(
+                schema=schema,
+                create_disposition="CREATE_IF_NEEDED",
+                write_disposition="WRITE_APPEND",
+            ),
+        ).result()
+
+    def create_dataset(self):
+        self.bq_client.create_dataset(self.accounts, exists_ok=True)
+        return self.accounts
+
+    @abstractmethod
+    def get_table(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_schema(self):
+        raise NotImplementedError
+
+    def update(self):
+        template = TEMPLATE_ENV.get_template("update_from_stage.sql.j2")
+        rendered_query = template.render(
+            dataset=self.accounts,
+            table=self.get_table(),
+            p_key=",".join(self.get_dimensions()),
+            incremental_key="_batched_at",
+        )
+
+        _ = self.bq_client.query(rendered_query).result()
+
+    def run(self):
+        column_headers, rows = self.fetch()
+        rows = self.transform(column_headers, rows)
+        results = self.load(rows)
+        self.update()
+
+        return {
+            "accounts": self.accounts,
+            "properties": self.properties,
+            "views": self.views,
+            "view_id": self.view_id,
+            "report": self.get_report_name(),
+            "start": self.start,
+            "end": self.end,
+            "num_processed": self.num_processed,
+            "output_rows": getattr(results, "output_rows", None),
+            "errors": getattr(results, "errors", None),
+        }
+
+    @abstractmethod
+    def get_report_name(self):
+        raise NotImplementedError
+
 
 class DemographicsReport(UAReports):
-    def __init__(self, ga_view_id, start, end):
-        super().__init__(ga_view_id, start, end)
+    def __init__(
+        self,
+        sessions,
+        bq_client,
+        headers,
+        accounts,
+        properties,
+        views,
+        view_id,
+        start,
+        end,
+    ):
+        super().__init__(
+            sessions,
+            bq_client,
+            headers,
+            accounts,
+            properties,
+            views,
+            view_id,
+            start,
+            end,
+        )
 
     def get_dimensions(self):
         return ["date", "userType", "country", "deviceCategory", "userAgeBracket"]
@@ -114,15 +283,59 @@ class DemographicsReport(UAReports):
             "bounceRate",
         ]
 
+    def get_table(self):
+        return f"{self.properties}__{self.views}__DemographicsReport"
+
+    def get_schema(self):
+        return [
+            {"name": "date", "type": "DATE"},
+            {"name": "userType", "type": "STRING"},
+            {"name": "country", "type": "STRING"},
+            {"name": "deviceCategory", "type": "STRING"},
+            {"name": "userAgeBracket", "type": "STRING"},
+            {"name": "users", "type": "INTEGER"},
+            {"name": "newUsers", "type": "INTEGER"},
+            {"name": "sessionsPerUser", "type": "FLOAT"},
+            {"name": "sessions", "type": "INTEGER"},
+            {"name": "pageviews", "type": "INTEGER"},
+            {"name": "pageviewsPerSession", "type": "FLOAT"},
+            {"name": "avgSessionDuration", "type": "FLOAT"},
+            {"name": "bounceRate", "type": "FLOAT"},
+            {"name": "_batched_at", "type": "TIMESTAMP"},
+        ]
+
+    def get_report_name(self):
+        return "Demographics"
+
 
 class AcquisitionsReport(UAReports):
-    def __init__(self, ga_view_id, start, end):
-        super().__init__(ga_view_id, start, end)
+    def __init__(
+        self,
+        sessions,
+        bq_client,
+        headers,
+        accounts,
+        properties,
+        views,
+        view_id,
+        start,
+        end,
+    ):
+        super().__init__(
+            sessions,
+            bq_client,
+            headers,
+            accounts,
+            properties,
+            views,
+            view_id,
+            start,
+            end,
+        )
 
     def get_dimensions(self):
         return [
             "date",
-            "clientId",
             "channelGrouping",
             "socialNetwork",
             "fullReferrer",
@@ -144,204 +357,85 @@ class AcquisitionsReport(UAReports):
             "uniqueEvents",
         ]
 
+    def get_table(self):
+        return f"{self.properties}__{self.views}__AcquisitionsReport"
 
-class UAJobs:
-    def __init__(self, ga_view_id, start, end):
-        self.ga_view_id = ga_view_id
-        self.start = start
-        self.end = end
-        self.sessions = self.init_session()
-        self.headers = self.create_header()
-        self.reports = [
-            UAReports.create(self.ga_view_id, i, self.start, self.end)
-            for i in ["demographics", "acquisitions"]
+    def get_schema(self):
+        return [
+            {"name": "date", "type": "STRING"},
+            {"name": "channelGrouping", "type": "STRING"},
+            {"name": "socialNetwork", "type": "STRING"},
+            {"name": "fullReferrer", "type": "STRING"},
+            {"name": "pagePath", "type": "STRING"},
+            {"name": "eventCategory", "type": "STRING"},
+            {"name": "eventAction", "type": "STRING"},
+            {"name": "users", "type": "INTEGER"},
+            {"name": "newUsers", "type": "INTEGER"},
+            {"name": "sessions", "type": "INTEGER"},
+            {"name": "pageviews", "type": "INTEGER"},
+            {"name": "avgSessionDuration", "type": "FLOAT"},
+            {"name": "bounceRate", "type": "FLOAT"},
+            {"name": "avgTimeOnPage", "type": "FLOAT"},
+            {"name": "totalEvents", "type": "INTEGER"},
+            {"name": "uniqueEvents", "type": "INTEGER"},
+            {"name": "_batched_at", "type": "TIMESTAMP"},
         ]
 
-    def init_session(self):
-        return requests.Session()
-
-    def create_header(self):
-        params = {
-            "client_id": CLIENT_ID,
-            "client_secret": CLIENT_SECRET,
-            "refresh_token": REFRESH_TOKEN,
-            "grant_type": "refresh_token",
-        }
-        with self.sessions.post(
-            "https://oauth2.googleapis.com/token", params=params
-        ) as r:
-            access_token = r.json().get("access_token")
-        return {
-            "Authorization": "Bearer " + access_token,
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        }
-
-    def fetch(self):
-        rows = []
-        payload = {"reportRequests": [report.make_requests() for report in self.reports]}
-        url = "https://analyticsreporting.googleapis.com/v4/reports:batchGet"
-        while True:
-            with self.sessions.post(
-                url,
-                headers=self.headers,
-                json=payload,
-            ) as r:
-                res = r.json()
-            report = res['reports'][0]
-            column_headers = report['columnHeader']
-            data = report['data']
-            _rows = data['rows']
-            rows.extend(_rows)
-            next_page_token = data.get('nextPageToken', None)
-            if next_page_token:
-                payload['reportRequests'][0]['pageToken'] = next_page_token
-            else:
-                break
-        return column_headers, rows
-
-    def transform(self, column_headers, rows):
-        dimension_headers = column_headers["dimensions"]
-        metric_headers = column_headers['metricHeader']['metricHeaderEntries']
-        
+    def get_report_name(self):
+        return "Acquisitions"
 
 
-    # def transform(self):
-    #     if results.get("reports")[0].get("data").get("rows") is None:
-    #                 break
-    #             report = results.get("reports")[0]
-    #             column_headers = report.get("columnHeader")
-    #             dimension_headers = column_headers.get("dimensions")
-    #             dimension_headers = list(
-    #                 map(lambda x: x.split(":")[1], dimension_headers)
-    #             )
-    #             metric_header = column_headers.get("metricHeader").get(
-    #                 "metricHeaderEntries"
-    #             )
-    #             for metric in metric_header:
-    #                 metric["name"] = metric["name"].split(":")[1]
-    #             for row in report.get("data").get("rows"):
-    #                 row_json = {}
-    #                 dimensions = row.get("dimensions")
-    #                 metrics = row.get("metrics")
-    #                 for header, dimension in zip(dimension_headers, dimensions):
-    #                     row_json[header] = dimension
-    #                 for i in metrics:
-    #                     for metricHeader, value in zip(metric_header, i.get("values")):
-    #                         row_json[metricHeader.get("name")] = value
-    #                 rows.append(row_json)
+class UAJobs:
+    def __init__(
+        self,
+        bq_client,
+        accounts,
+        properties,
+        views,
+        view_id,
+        headers=None,
+        start=None,
+        end=None,
+    ):
+        self.bq_client = bq_client
+        self.accounts = accounts
+        self.properties = properties
+        self.views = views
+        self.view_id = view_id
+        self.start, self.end = self.get_time_range(start, end)
+        self.sessions = requests.Session()
+        if not headers:
+            self.headers = create_headers()
+        else:
+            self.headers = headers
 
-    #     for i in tqdm(rows):
-    #         i["date"] = datetime.strptime(i["date"], "%Y%m%d").strftime("%Y-%m-%d")
-
-    # async def fetch_reports(self):
-    #     transaction_report = await self.fetch_report(self.reports.get("transactions"))
-    #     sessions_report = await self.fetch_report(self.reports.get("sessions"))
-
-    #     client_ids = [i["clientId"] for i in transaction_report]
-    #     client_ids = list(set(client_ids))
-    #     key_func = lambda x: x["date"]
-
-    #     transaction_report_grouped = [
-    #         {
-    #             "key": key,
-    #             "path": self.reports.get("transactions").get("path"),
-    #             "value": "\n".join([json.dumps(i) for i in group]),
-    #         }
-    #         for key, group in itertools.groupby(
-    #             sorted(transaction_report, key=key_func), key_func
-    #         )
-    #     ]
-    #     sessions_report_grouped = [
-    #         {
-    #             "key": key,
-    #             "path": self.reports.get("sessions").get("path"),
-    #             "value": "\n".join([json.dumps(i) for i in group]),
-    #         }
-    #         for key, group in itertools.groupby(
-    #             sorted(sessions_report, key=key_func), key_func
-    #         )
-    #     ]
-
-    #     for rows_grouped in [transaction_report_grouped, sessions_report_grouped]:
-    #         async with Storage(session=aiohttp.ClientSession()) as storage_client:
-    #             tasks = [
-    #                 asyncio.create_task(
-    #                     self.upload(
-    #                         storage_client, row["path"], row["key"], row["value"]
-    #                     )
-    #                 )
-    #                 for row in rows_grouped
-    #             ]
-    #             _ = [
-    #                 await f for f in tqdm(asyncio.as_completed(tasks), total=len(tasks))
-    #             ]
-
-    #     return client_ids
-
-    # async def upload(self, storage_client, path, filename, data):
-    #     _ = await storage_client.upload(
-    #         self.bucket, path + filename + ".json", data, timeout=60
-    #     )
-
-    # async def fetch_activity(self, client_id, sessions, storage_client):
-    #     body = {
-    #         "dateRange": {
-    #             "startDate": self.earliest_date,
-    #             "endDate": self.end_date,
-    #         },
-    #         "viewId": self.ga_view_id,
-    #         "pageSize": 50000,
-    #         "user": {"type": "CLIENT_ID", "userId": client_id},
-    #     }
-    #     next_page_token = str(0)
-    #     empty_sessions = False
-    #     activities = []
-    #     while next_page_token != None:
-    #         body["pageToken"] = next_page_token
-    #         async with sessions.post(
-    #             "https://analyticsreporting.googleapis.com/v4/userActivity:search",
-    #             headers=self.headers,
-    #             json=body,
-    #         ) as r:
-    #             results = await r.json()
-    #         page_sessions = results.get("sessions")
-    #         if page_sessions == None:
-    #             empty_sessions = True
-    #             break
-    #         activities.append(page_sessions)
-    #         next_page_token = results.get("nextPageToken")
-
-    #     if empty_sessions == False:
-    #         activities = [i for j in activities for i in j]
-    #         activities = [dict(item, **{"client_id": client_id}) for item in activities]
-
-    #         _ = await self.upload(
-    #             storage_client,
-    #             self.activities.get("path"),
-    #             client_id,
-    #             "\n".join([json.dumps(i) for i in activities]),
-    #         )
-
-    # async def fetch_activities(self, client_ids):
-        # async with aiohttp.ClientSession(
-        #     connector=aiohttp.TCPConnector(limit=9)
-        # ) as session, Storage(session=aiohttp.ClientSession()) as storage_client:
-        #     tasks = [
-        #         asyncio.create_task(
-        #             self.fetch_activity(client_id, session, storage_client)
-        #         )
-        #         for client_id in client_ids
-        #     ]
-        #     _ = [await f for f in tqdm(asyncio.as_completed(tasks), total=len(tasks))]
+    def get_time_range(self, start, end):
+        if start and end:
+            return start, end
+        else:
+            now = datetime.now()
+            end = now.strftime("%Y-%m-%d")
+            start = (now - timedelta(days=10)).strftime("%Y-%m-%d")
+            return start, end
 
     def run(self):
-        client_ids = self.fetch()
-        # await self.fetch_activities(client_ids)
-        # response = {
-            # "start_date": self.start_date,
-            # "end_date": self.end_date,
-            # "num_processed": len(client_ids),
-        # }
-        # print(response)
-        # return response
+        reports = [
+            UAReports.create(
+                self.sessions,
+                self.bq_client,
+                self.headers,
+                self.accounts,
+                self.properties,
+                self.views,
+                self.view_id,
+                i,
+                self.start,
+                self.end,
+            )
+            for i in ["demographics", "acquisitions"]
+        ]
+        response = {
+            "pipelines": "Universal Analytics",
+            "results": [i.run() for i in reports],
+        }
+        return response
