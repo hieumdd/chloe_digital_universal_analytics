@@ -18,7 +18,7 @@ def main(request):
 
     if data:
         if "broadcast" in data:
-            job = broadcast()
+            response = broadcast(data.get("start"), data.get("end"))
         if "view_id" in data:
             job = UAJobs(
                 bq_client=BQ_CLIENT,
@@ -30,6 +30,6 @@ def main(request):
                 start=data.get("start"),
                 end=data.get("end"),
             )
-    response = job.run()
+            response = job.run()
     print(response)
     return response

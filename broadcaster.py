@@ -7,13 +7,13 @@ from google.cloud import pubsub_v1, bigquery
 from models import create_headers
 
 
-def broadcast():
+def broadcast(start=None, end=None):
     view_ids = get_view_ids()
     headers = create_headers()
     publisher = pubsub_v1.PublisherClient()
     topic_path = publisher.topic_path(os.getenv("PROJECT_ID"), os.getenv("TOPIC_ID"))
     for i in view_ids:
-        data = {**i, **{"headers": headers}}
+        data = {**i, **{"headers": headers}, **{"start": start, "end": end}}
         message_json = json.dumps(data)
         message_bytes = message_json.encode("utf-8")
         publisher.publish(topic_path, data=message_bytes).result()

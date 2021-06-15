@@ -146,17 +146,19 @@ class UAReports(metaclass=ABCMeta):
                 json=payload,
             ) as r:
                 res = r.json()
-                res
             report = res["reports"][0]
             column_header = report["columnHeader"]
             data = report["data"]
-            _rows = data["rows"]
-            rows.extend(_rows)
-            next_page_token = data.get("nextPageToken", None)
-            if next_page_token:
-                payload["reportRequests"][0]["pageToken"] = next_page_token
+            _rows = data.get('rows')
+            if _rows:
+                rows.extend(_rows)
+                next_page_token = data.get("nextPageToken", None)
+                if next_page_token:
+                    payload["reportRequests"][0]["pageToken"] = next_page_token
+                else:
+                    break
             else:
-                break
+                rows = []
         return column_header, rows
 
     def transform(self, column_headers, _rows):
@@ -221,9 +223,19 @@ class UAReports(metaclass=ABCMeta):
 
     def run(self):
         column_headers, rows = self.fetch()
-        rows = self.transform(column_headers, rows)
-        results = self.load(rows)
-        self.update()
+        if len(rows) > 0:
+            rows = self.transform(column_headers, rows)
+            results = self.load(rows)
+            self.update()
+            run_responses = {
+                "num_processed": self.num_processed,
+                "output_rows": getattr(results, "output_rows", None),
+                "errors": getattr(results, "errors", None),
+            }
+        else:
+            run_responses = {
+                "status": "no rows"
+            }
 
         return {
             "accounts": self.accounts,
@@ -233,9 +245,7 @@ class UAReports(metaclass=ABCMeta):
             "report": self.get_report_name(),
             "start": self.start,
             "end": self.end,
-            "num_processed": self.num_processed,
-            "output_rows": getattr(results, "output_rows", None),
-            "errors": getattr(results, "errors", None),
+            **run_responses
         }
 
     @abstractmethod
