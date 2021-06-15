@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime, timedelta
 from abc import abstractmethod, ABCMeta
 
@@ -208,7 +209,10 @@ class UAReports(metaclass=ABCMeta):
 
     @abstractmethod
     def get_schema(self):
-        raise NotImplementedError
+        report_name = self.get_report_name()
+        with open(f'schemas/{report_name}.json', 'r') as f:
+            schema = json.load(f)
+        return schema
 
     def update(self):
         template = TEMPLATE_ENV.get_template("update_from_stage.sql.j2")
@@ -296,24 +300,6 @@ class DemographicsReport(UAReports):
     def get_table(self):
         return f"{self.properties}__{self.views}__DemographicsReport"
 
-    def get_schema(self):
-        return [
-            {"name": "date", "type": "DATE"},
-            {"name": "userType", "type": "STRING"},
-            {"name": "country", "type": "STRING"},
-            {"name": "deviceCategory", "type": "STRING"},
-            {"name": "userAgeBracket", "type": "STRING"},
-            {"name": "users", "type": "INTEGER"},
-            {"name": "newUsers", "type": "INTEGER"},
-            {"name": "sessionsPerUser", "type": "FLOAT"},
-            {"name": "sessions", "type": "INTEGER"},
-            {"name": "pageviews", "type": "INTEGER"},
-            {"name": "pageviewsPerSession", "type": "FLOAT"},
-            {"name": "avgSessionDuration", "type": "FLOAT"},
-            {"name": "bounceRate", "type": "FLOAT"},
-            {"name": "_batched_at", "type": "TIMESTAMP"},
-        ]
-
     def get_report_name(self):
         return "Demographics"
 
@@ -369,27 +355,6 @@ class AcquisitionsReport(UAReports):
 
     def get_table(self):
         return f"{self.properties}__{self.views}__AcquisitionsReport"
-
-    def get_schema(self):
-        return [
-            {"name": "date", "type": "STRING"},
-            {"name": "channelGrouping", "type": "STRING"},
-            {"name": "socialNetwork", "type": "STRING"},
-            {"name": "fullReferrer", "type": "STRING"},
-            {"name": "pagePath", "type": "STRING"},
-            {"name": "eventCategory", "type": "STRING"},
-            {"name": "eventAction", "type": "STRING"},
-            {"name": "users", "type": "INTEGER"},
-            {"name": "newUsers", "type": "INTEGER"},
-            {"name": "sessions", "type": "INTEGER"},
-            {"name": "pageviews", "type": "INTEGER"},
-            {"name": "avgSessionDuration", "type": "FLOAT"},
-            {"name": "bounceRate", "type": "FLOAT"},
-            {"name": "avgTimeOnPage", "type": "FLOAT"},
-            {"name": "totalEvents", "type": "INTEGER"},
-            {"name": "uniqueEvents", "type": "INTEGER"},
-            {"name": "_batched_at", "type": "TIMESTAMP"},
-        ]
 
     def get_report_name(self):
         return "Acquisitions"

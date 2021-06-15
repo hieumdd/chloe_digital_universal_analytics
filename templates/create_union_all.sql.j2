@@ -1,0 +1,17 @@
+CREATE
+OR REPLACE VIEW `UniversalAnalytics.{{ report_name }}` AS
+{% for i in view_ids -%}
+    (SELECT
+        {% for field in fields -%}
+            `{{ field }}`,
+        {%- endfor %}
+        '{{ i.accounts }}' AS `accounts`,
+        '{{ i.properties }}' AS `properties`,
+        '{{ i.views }}' AS `views`
+    FROM
+        `{{ i.accounts }}.{{ i.properties }}__{{ i.views }}__{{ report_name }}Report`
+    )
+    {% if not loop.last -%}
+    UNION ALL
+    {%- endif %}
+{% endfor %}

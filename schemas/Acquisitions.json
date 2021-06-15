@@ -1,0 +1,70 @@
+[
+    {
+        "name": "date",
+        "type": "STRING"
+    },
+    {
+        "name": "channelGrouping",
+        "type": "STRING"
+    },
+    {
+        "name": "socialNetwork",
+        "type": "STRING"
+    },
+    {
+        "name": "fullReferrer",
+        "type": "STRING"
+    },
+    {
+        "name": "pagePath",
+        "type": "STRING"
+    },
+    {
+        "name": "eventCategory",
+        "type": "STRING"
+    },
+    {
+        "name": "eventAction",
+        "type": "STRING"
+    },
+    {
+        "name": "users",
+        "type": "INTEGER"
+    },
+    {
+        "name": "newUsers",
+        "type": "INTEGER"
+    },
+    {
+        "name": "sessions",
+        "type": "INTEGER"
+    },
+    {
+        "name": "pageviews",
+        "type": "INTEGER"
+    },
+    {
+        "name": "avgSessionDuration",
+        "type": "FLOAT"
+    },
+    {
+        "name": "bounceRate",
+        "type": "FLOAT"
+    },
+    {
+        "name": "avgTimeOnPage",
+        "type": "FLOAT"
+    },
+    {
+        "name": "totalEvents",
+        "type": "INTEGER"
+    },
+    {
+        "name": "uniqueEvents",
+        "type": "INTEGER"
+    },
+    {
+        "name": "_batched_at",
+        "type": "TIMESTAMP"
+    }
+]
