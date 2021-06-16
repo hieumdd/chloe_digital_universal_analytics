@@ -70,9 +70,14 @@ class UAReports(metaclass=ABCMeta):
         start=None,
         end=None,
     ):
-        if mode == "demographics":
-            return DemographicsReport(
-                sessions,
+        mapper = {
+            'demographics': DemographicsReport,
+            'ages': AgesReport,
+            'acquisitions': AcquisitionsReport,
+            'events': EventsReport
+        }
+        if mode in mapper:
+            return mapper[mode](sessions,
                 bq_client,
                 headers,
                 accounts,
@@ -80,20 +85,7 @@ class UAReports(metaclass=ABCMeta):
                 views,
                 view_id,
                 start,
-                end,
-            )
-        elif mode == "acquisitions":
-            return AcquisitionsReport(
-                sessions,
-                bq_client,
-                headers,
-                accounts,
-                properties,
-                views,
-                view_id,
-                start,
-                end,
-            )
+                end)
         else:
             raise NotImplementedError
 
@@ -207,7 +199,6 @@ class UAReports(metaclass=ABCMeta):
     def get_table(self):
         raise NotImplementedError
 
-    @abstractmethod
     def get_schema(self):
         report_name = self.get_report_name()
         with open(f'schemas/{report_name}.json', 'r') as f:
@@ -283,7 +274,7 @@ class DemographicsReport(UAReports):
         )
 
     def get_dimensions(self):
-        return ["date", "userType", "country", "deviceCategory", "userAgeBracket"]
+        return ["date", "channelGrouping", "deviceCategory", "userType", "country"]
 
     def get_metrics(self):
         return [
@@ -302,6 +293,52 @@ class DemographicsReport(UAReports):
 
     def get_report_name(self):
         return "Demographics"
+
+class AgesReport(UAReports):
+    def __init__(
+        self,
+        sessions,
+        bq_client,
+        headers,
+        accounts,
+        properties,
+        views,
+        view_id,
+        start,
+        end,
+    ):
+        super().__init__(
+            sessions,
+            bq_client,
+            headers,
+            accounts,
+            properties,
+            views,
+            view_id,
+            start,
+            end,
+        )
+
+    def get_dimensions(self):
+        return ["date", "channelGrouping", "deviceCategory", "userAgeBracket"]
+
+    def get_metrics(self):
+        return [
+            "users",
+            "newUsers",
+            "sessionsPerUser",
+            "sessions",
+            "pageviews",
+            "pageviewsPerSession",
+            "avgSessionDuration",
+            "bounceRate",
+        ]
+
+    def get_table(self):
+        return f"{self.properties}__{self.views}__AgesReport"
+
+    def get_report_name(self):
+        return "Ages"
 
 
 class AcquisitionsReport(UAReports):
@@ -332,12 +369,11 @@ class AcquisitionsReport(UAReports):
     def get_dimensions(self):
         return [
             "date",
+            "deviceCategory",
             "channelGrouping",
             "socialNetwork",
             "fullReferrer",
-            "pagePath",
-            "eventCategory",
-            "eventAction",
+            "pagePath"
         ]
 
     def get_metrics(self):
@@ -358,6 +394,60 @@ class AcquisitionsReport(UAReports):
 
     def get_report_name(self):
         return "Acquisitions"
+
+
+class EventsReport(UAReports):
+    def __init__(
+        self,
+        sessions,
+        bq_client,
+        headers,
+        accounts,
+        properties,
+        views,
+        view_id,
+        start,
+        end,
+    ):
+        super().__init__(
+            sessions,
+            bq_client,
+            headers,
+            accounts,
+            properties,
+            views,
+            view_id,
+            start,
+            end,
+        )
+
+    def get_dimensions(self):
+        return [
+            "date",
+            "deviceCategory",
+            "channelGrouping",
+            "eventCategory",
+            "eventAction",
+        ]
+
+    def get_metrics(self):
+        return [
+            "users",
+            "newUsers",
+            "sessions",
+            "pageviews",
+            "avgSessionDuration",
+            "bounceRate",
+            "avgTimeOnPage",
+            "totalEvents",
+            "uniqueEvents",
+        ]
+
+    def get_table(self):
+        return f"{self.properties}__{self.views}__EventsReport"
+
+    def get_report_name(self):
+        return "Events"
 
 
 class UAJobs:
@@ -407,7 +497,7 @@ class UAJobs:
                 self.start,
                 self.end,
             )
-            for i in ["demographics", "acquisitions"]
+            for i in ["demographics", "ages", "acquisitions", "events"]
         ]
         response = {
             "pipelines": "Universal Analytics",

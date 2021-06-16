@@ -4,19 +4,19 @@
         "type": "DATE"
     },
     {
+        "name": "deviceCategory",
+        "type": "STRING"
+    },
+    {
+        "name": "channelGrouping",
+        "type": "STRING"
+    },
+    {
         "name": "userType",
         "type": "STRING"
     },
     {
         "name": "country",
-        "type": "STRING"
-    },
-    {
-        "name": "deviceCategory",
-        "type": "STRING"
-    },
-    {
-        "name": "userAgeBracket",
         "type": "STRING"
     },
     {

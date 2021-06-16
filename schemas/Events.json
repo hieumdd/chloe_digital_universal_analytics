@@ -12,15 +12,11 @@
         "type": "STRING"
     },
     {
-        "name": "socialNetwork",
+        "name": "eventCategory",
         "type": "STRING"
     },
     {
-        "name": "fullReferrer",
-        "type": "STRING"
-    },
-    {
-        "name": "pagePath",
+        "name": "eventAction",
         "type": "STRING"
     },
     {

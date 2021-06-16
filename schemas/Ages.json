@@ -1,7 +1,7 @@
 [
     {
         "name": "date",
-        "type": "STRING"
+        "type": "DATE"
     },
     {
         "name": "deviceCategory",
@@ -12,15 +12,7 @@
         "type": "STRING"
     },
     {
-        "name": "socialNetwork",
-        "type": "STRING"
-    },
-    {
-        "name": "fullReferrer",
-        "type": "STRING"
-    },
-    {
-        "name": "pagePath",
+        "name": "userAgeBracket",
         "type": "STRING"
     },
     {
@@ -32,6 +24,10 @@
         "type": "INTEGER"
     },
     {
+        "name": "sessionsPerUser",
+        "type": "FLOAT"
+    },
+    {
         "name": "sessions",
         "type": "INTEGER"
     },
@@ -40,24 +36,16 @@
         "type": "INTEGER"
     },
     {
+        "name": "pageviewsPerSession",
+        "type": "FLOAT"
+    },
+    {
         "name": "avgSessionDuration",
         "type": "FLOAT"
     },
     {
         "name": "bounceRate",
         "type": "FLOAT"
-    },
-    {
-        "name": "avgTimeOnPage",
-        "type": "FLOAT"
-    },
-    {
-        "name": "totalEvents",
-        "type": "INTEGER"
-    },
-    {
-        "name": "uniqueEvents",
-        "type": "INTEGER"
     },
     {
         "name": "_batched_at",

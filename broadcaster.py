@@ -21,14 +21,14 @@ def broadcast(start=None, end=None):
     bq_client = bigquery.Client(credentials=credentials, project=project)
 
     view_ids = get_view_ids(bq_client)
-    # headers = create_headers()
-    # publisher = pubsub_v1.PublisherClient()
-    # topic_path = publisher.topic_path(os.getenv("PROJECT_ID"), os.getenv("TOPIC_ID"))
-    # for i in view_ids:
-    #     data = {**i, **{"headers": headers}, **{"start": start, "end": end}}
-    #     message_json = json.dumps(data)
-    #     message_bytes = message_json.encode("utf-8")
-    #     publisher.publish(topic_path, data=message_bytes).result()
+    headers = create_headers()
+    publisher = pubsub_v1.PublisherClient()
+    topic_path = publisher.topic_path(os.getenv("PROJECT_ID"), os.getenv("TOPIC_ID"))
+    for i in view_ids:
+        data = {**i, **{"headers": headers}, **{"start": start, "end": end}}
+        message_json = json.dumps(data)
+        message_bytes = message_json.encode("utf-8")
+        publisher.publish(topic_path, data=message_bytes).result()
     create_union(bq_client, view_ids)
     return {"message_sent": len(view_ids)}
 
