@@ -51,4 +51,4 @@ def create_union(bq_client, view_ids):
             fields=fields,
             report_name=i.replace(".json", ""),
         )
-        _ = bq_client.query(rendered_query).result()
+        _ = bq_client.query(rendered_query)
