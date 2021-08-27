@@ -19,8 +19,12 @@ def main(request):
         )
     elif "view_id" in data:
         job = UAJob(
-            options=data["options"],
-            headers=data.get("headers"),
+            email=data["email"],
+            account=data["account"],
+            property=data["property"],
+            view=data["view"],
+            view_id=data["view_id"],
+            headers=data["headers"],
             start=data.get("start"),
             end=data.get("end"),
         )

@@ -56,6 +56,22 @@
         "type": "INTEGER"
     },
     {
+        "name": "_email",
+        "type": "STRING"
+    },
+    {
+        "name": "_account",
+        "type": "STRING"
+    },
+    {
+        "name": "_property",
+        "type": "STRING"
+    },
+    {
+        "name": "_view",
+        "type": "TIMESTAMP"
+    },
+    {
         "name": "_batched_at",
         "type": "TIMESTAMP"
     }

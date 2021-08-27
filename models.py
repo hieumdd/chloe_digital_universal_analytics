@@ -49,6 +49,7 @@ def get_headers():
         "Accept": "application/json",
     }
 
+
 def get_sessions():
     sessions = requests.Session()
     retry = Retry(
@@ -83,7 +84,7 @@ class UAReport(metaclass=ABCMeta):
     @property
     @abstractmethod
     def table(self):
-        return f"{self.report}__{self.properties}__{self.views}"
+        return f"{self.report}__{self.account}__{self.property}__{self.view}"
 
     @property
     def schema(self):
@@ -96,10 +97,25 @@ class UAReport(metaclass=ABCMeta):
         with open(f"schemas/{self.report}.json", "r") as f:
             return json.load(f)
 
-    def __init__(self, sessions, headers, options, start, end):
+    def __init__(
+        self,
+        sessions,
+        headers,
+        email,
+        account,
+        property,
+        view,
+        view_id,
+        start,
+        end,
+    ):
         self.sessions = sessions
         self.headers = headers
-        self.options = options
+        self.email = email
+        self.account = account
+        self.property = property
+        self.view = view
+        self.view_id = view_id
         self.start = start
         self.end = end
 
@@ -118,7 +134,7 @@ class UAReport(metaclass=ABCMeta):
                         "startDate": self.start,
                         "endDate": self.end,
                     },
-                    "viewId": self.options["view_id"],
+                    "viewId": self.view_id,
                     "dimensions": [
                         {
                             "name": f"ga:{dimension}",
@@ -189,6 +205,10 @@ class UAReport(metaclass=ABCMeta):
                 {
                     **dimension_values,
                     **metric_values,
+                    "_email": self.email,
+                    "_account": self.account,
+                    "_property": self.property,
+                    "_view": self.view,
                     "_batched_at": NOW.isoformat(timespec="seconds"),
                 }
             )
@@ -252,8 +272,29 @@ class UAReport(metaclass=ABCMeta):
 
 
 class Demographics(UAReport):
-    def __init__(self, sessions, headers, options, start, end):
-        super().__init__(sessions, headers, options, start, end)
+    def __init__(
+        self,
+        sessions,
+        headers,
+        email,
+        account,
+        property,
+        view,
+        view_id,
+        start,
+        end,
+    ):
+        super().__init__(
+            sessions,
+            headers,
+            email,
+            account,
+            property,
+            view,
+            view_id,
+            start,
+            end,
+        )
 
     @property
     def report(self):
@@ -284,8 +325,29 @@ class Demographics(UAReport):
 
 
 class Ages(UAReport):
-    def __init__(self, sessions, headers, options, start, end):
-        super().__init__(sessions, headers, options, start, end)
+    def __init__(
+        self,
+        sessions,
+        headers,
+        email,
+        account,
+        property,
+        view,
+        view_id,
+        start,
+        end,
+    ):
+        super().__init__(
+            sessions,
+            headers,
+            email,
+            account,
+            property,
+            view,
+            view_id,
+            start,
+            end,
+        )
 
     @property
     def report(self):
@@ -315,8 +377,29 @@ class Ages(UAReport):
 
 
 class Acquisitions(UAReport):
-    def __init__(self, sessions, headers, options, start, end):
-        super().__init__(sessions, headers, options, start, end)
+    def __init__(
+        self,
+        sessions,
+        headers,
+        email,
+        account,
+        property,
+        view,
+        view_id,
+        start,
+        end,
+    ):
+        super().__init__(
+            sessions,
+            headers,
+            email,
+            account,
+            property,
+            view,
+            view_id,
+            start,
+            end,
+        )
 
     @property
     def report(self):
@@ -349,8 +432,29 @@ class Acquisitions(UAReport):
 
 
 class Events(UAReport):
-    def __init__(self, sessions, headers, options, start, end):
-        super().__init__(sessions, headers, options, start, end)
+    def __init__(
+        self,
+        sessions,
+        headers,
+        email,
+        account,
+        property,
+        view,
+        view_id,
+        start,
+        end,
+    ):
+        super().__init__(
+            sessions,
+            headers,
+            email,
+            account,
+            property,
+            view,
+            view_id,
+            start,
+            end,
+        )
 
     @property
     def report(self):
@@ -390,8 +494,6 @@ class UAJob:
             self.headers = get_headers()
         else:
             self.headers = headers
-
-    
 
     def _get_time_range(self, start, end):
         """Set the time range
