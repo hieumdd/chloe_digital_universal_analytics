@@ -1,54 +1,107 @@
 import os
 import json
+import itertools
 
-import google.auth
-from google.cloud import pubsub_v1, bigquery
+import requests
+from google.cloud import pubsub_v1
 import jinja2
 
-from models import create_headers
+from models import get_headers
+
+BASE_ID = "apporLbA6XsKHTKpz"
 
 TEMPLATE_LOADER = jinja2.FileSystemLoader(searchpath="./templates")
 TEMPLATE_ENV = jinja2.Environment(loader=TEMPLATE_LOADER)
 
-
-def broadcast(start=None, end=None):
-    credentials, project = google.auth.default(
-        scopes=[
-            "https://www.googleapis.com/auth/drive",
-            "https://www.googleapis.com/auth/bigquery",
-        ]
-    )
-    bq_client = bigquery.Client(credentials=credentials, project=project)
-
-    view_ids = get_view_ids(bq_client)
-    headers = create_headers()
-    publisher = pubsub_v1.PublisherClient()
-    topic_path = publisher.topic_path(os.getenv("PROJECT_ID"), os.getenv("TOPIC_ID"))
-    for i in view_ids:
-        data = {**i, **{"headers": headers}, **{"start": start, "end": end}}
-        message_json = json.dumps(data)
-        message_bytes = message_json.encode("utf-8")
-        publisher.publish(topic_path, data=message_bytes).result()
-    create_union(bq_client, view_ids)
-    return {"message_sent": len(view_ids)}
+PUBLISHER = pubsub_v1.PublisherClient()
+TOPIC_PATH = PUBLISHER.topic_path(os.getenv("PROJECT_ID"), os.getenv("TOPIC_ID"))
 
 
-def get_view_ids(bq_client):
-    rows = bq_client.query("SELECT * FROM config._ext_UAViews").result()
-    return [dict(row.items()) for row in rows]
+def get_accounts():
+    url = f"https://api.airtable.com/v0/{BASE_ID}/CLIENT%20DETAILS"
+    params = {
+        "view": "Active By Tier",
+        "fields%5B%5D": [
+            "Website",
+            "GA account",
+        ],
+    }
+    rows = []
+    with requests.Session() as sessions:
+        while True:
+            with sessions.get(
+                url,
+                params=params,
+                headers={
+                    "Authorization": f"Bearer {os.getenv('AIRTABLE_API_KEY')}",
+                },
+            ) as r:
+                res = r.json()
+            rows.extend(res["records"])
+            offset = res.get("offset")
+            if offset:
+                params["offset"] = offset
+            else:
+                break
+    rows = [
+        {
+            "website": row["fields"].get("Website"),
+            "email": row["fields"].get("GA account"),
+            # "refresh_token": row["refresh_token"],
+        }
+        for row in rows
+        if row["fields"].get("GA account")
+    ]
+    key = lambda x: (x["email"], x["refresh_token"])
+    rows_groupby = [
+        {
+            "key": k,
+            "value": [i for i in v],
+        }
+        for k, v in itertools.groupby(sorted(rows, key=key), key)
+    ]
+    return rows_groupby
 
 
-def create_union(bq_client, view_ids):
-    template = TEMPLATE_ENV.get_template("create_union_all.sql.j2")
-    schema_path = "schemas/"
-    for i in os.listdir(schema_path):
-        with open(schema_path + i, "r") as f:
-            schema = json.load(f)
-        fields = [i["name"] for i in schema]
-        rendered_query = template.render(
-            project_id=os.getenv("PROJECT_ID"),
-            view_ids=view_ids,
-            fields=fields,
-            report_name=i.replace(".json", ""),
-        )
-        _ = bq_client.query(rendered_query)
+def publish(data):
+    message_json = json.dumps(data)
+    message_bytes = message_json.encode("utf-8")
+    PUBLISHER.publish(TOPIC_PATH, data=message_bytes).result()
+
+
+def broadcast_job(broadcast_data):
+    headers = get_headers(broadcast_data["key"]["refresh_token"])
+    value = broadcast_data["value"]
+    for job in value:
+        data = {
+            "headers": headers,
+            "email": job["email"],
+            "account": job["account"],
+            "property": job["property"],
+            "view": job["view"],
+            "view_id": job["view_id"],
+            "start": broadcast_data.get("start"),
+            "end": broadcast_data.get("end"),
+        }
+        publish(data)
+    return {
+        "broadcast": "job",
+        "email": broadcast_data["key"]["email"],
+        "message_sent": len(value),
+    }
+
+
+def broadcast_email(broadcast_data):
+    accounts = get_accounts()
+    for account in accounts:
+        data = {
+            "email": account["email"],
+            "refresh_token": account["refresh_token"],
+            "start": broadcast_data.get("start"),
+            "end": broadcast_data.get("end"),
+        }
+        publish(data)
+    return {
+        "broadcast": "job",
+        "message_sent": len(accounts),
+    }
