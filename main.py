@@ -1,12 +1,8 @@
 import base64
 import json
 
-from google.cloud import bigquery
-
-from models import UAJobs
-from broadcaster import broadcast
-
-BQ_CLIENT = bigquery.Client()
+from models import UAJob
+from broadcast import broadcast
 
 
 def main(request):
@@ -16,20 +12,25 @@ def main(request):
     data = json.loads(base64.b64decode(data_bytes).decode("utf-8"))
     print(data)
 
-    if data:
-        if "broadcast" in data:
-            response = broadcast(data.get("start"), data.get("end"))
-        if "view_id" in data:
-            job = UAJobs(
-                bq_client=BQ_CLIENT,
-                accounts=data["accounts"],
-                properties=data["properties"],
-                views=data["views"],
-                view_id=data["view_id"],
-                headers=data.get("headers"),
-                start=data.get("start"),
-                end=data.get("end"),
-            )
-            response = job.run()
+    if "broadcast" in data:
+        results = broadcast(
+            data.get("start"),
+            data.get("end"),
+        )
+    elif "view_id" in data:
+        job = UAJob(
+            options=data["options"],
+            headers=data.get("headers"),
+            start=data.get("start"),
+            end=data.get("end"),
+        )
+        results = job.run()
+    else:
+        raise NotImplementedError(data)
+
+    response = {
+        "pipelines": "GA",
+        "results": results,
+    }
     print(response)
     return response

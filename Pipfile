@@ -6,15 +6,12 @@ name = "pypi"
 [packages]
 requests = "*"
 google-cloud-bigquery = "*"
-python-dotenv = "*"
 google-cloud-pubsub = "*"
 jinja2 = "*"
 
 [dev-packages]
 black = "*"
 pytest = "*"
-pytest-dotenv = "*"
-functions-framework = "*"
 
 [requires]
 python_version = "3.8"
