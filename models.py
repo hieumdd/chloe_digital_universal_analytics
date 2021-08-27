@@ -61,7 +61,7 @@ def get_sessions():
     return sessions
 
 
-class UAReports(metaclass=ABCMeta):
+class UAReport(metaclass=ABCMeta):
     @property
     @abstractmethod
     def report(self):
@@ -251,7 +251,7 @@ class UAReports(metaclass=ABCMeta):
         return responses
 
 
-class Demographics(UAReports):
+class Demographics(UAReport):
     def __init__(self, sessions, headers, options, start, end):
         super().__init__(sessions, headers, options, start, end)
 
@@ -283,7 +283,7 @@ class Demographics(UAReports):
         ]
 
 
-class Ages(UAReports):
+class Ages(UAReport):
     def __init__(self, sessions, headers, options, start, end):
         super().__init__(sessions, headers, options, start, end)
 
@@ -314,7 +314,7 @@ class Ages(UAReports):
         ]
 
 
-class Acquisitions(UAReports):
+class Acquisitions(UAReport):
     def __init__(self, sessions, headers, options, start, end):
         super().__init__(sessions, headers, options, start, end)
 
@@ -348,7 +348,7 @@ class Acquisitions(UAReports):
         ]
 
 
-class Events(UAReports):
+class Events(UAReport):
     def __init__(self, sessions, headers, options, start, end):
         super().__init__(sessions, headers, options, start, end)
 
@@ -381,7 +381,7 @@ class Events(UAReports):
         ]
 
 
-class UAJobs:
+class UAJob:
     def __init__(self, options, start, end, headers=None):
         self.options = options
         self.start, self.end = self._get_time_range(start, end)
