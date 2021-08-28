@@ -2,7 +2,7 @@ import base64
 import json
 
 from models import UAJob
-from broadcast import broadcast
+from broadcast import broadcast_email, broadcast_job
 
 
 def main(request):
@@ -13,10 +13,11 @@ def main(request):
     print(data)
 
     if "broadcast" in data:
-        results = broadcast(
-            data.get("start"),
-            data.get("end"),
-        )
+        if 'refresh_token' in data:
+            job = broadcast_job
+        else:
+            job = broadcast_email
+        results = job(data)
     elif "view_id" in data:
         job = UAJob(
             email=data["email"],

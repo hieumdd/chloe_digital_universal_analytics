@@ -47,7 +47,7 @@ def get_accounts():
         {
             "website": row["fields"].get("Website"),
             "email": row["fields"].get("GA account"),
-            # "refresh_token": row["refresh_token"],
+            "refresh_token": "refresh_token",
         }
         for row in rows
         if row["fields"].get("GA account")
@@ -70,7 +70,7 @@ def publish(data):
 
 
 def broadcast_job(broadcast_data):
-    headers = get_headers(broadcast_data["key"]["refresh_token"])
+    headers = get_headers(broadcast_data["refresh_token"])
     value = broadcast_data["value"]
     for job in value:
         data = {
@@ -95,13 +95,17 @@ def broadcast_email(broadcast_data):
     accounts = get_accounts()
     for account in accounts:
         data = {
-            "email": account["email"],
-            "refresh_token": account["refresh_token"],
+            "email": account["key"][0],
+            "refresh_token": account["key"][1],
+            "value": account["value"],
             "start": broadcast_data.get("start"),
             "end": broadcast_data.get("end"),
         }
-        publish(data)
+        data
+        # publish(data)
     return {
-        "broadcast": "job",
+        "broadcast": "email",
         "message_sent": len(accounts),
     }
+
+broadcast_email({})
