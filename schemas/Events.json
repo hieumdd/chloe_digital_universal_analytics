@@ -69,7 +69,7 @@
     },
     {
         "name": "_view",
-        "type": "TIMESTAMP"
+        "type": "STRING"
     },
     {
         "name": "_batched_at",
