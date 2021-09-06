@@ -1,13 +1,13 @@
-name: deploy
+name: CI/CD
 on:
   push:
     branches: [master]
   workflow_dispatch:
 
 env:
-  FUNCTIONS_NAME: ChloeDigital_UA
+  FUNCTIONS_NAME: chloe_digital_universal_analytics
   REGION: us-central1
-  TOPIC_ID: ChloeDigital_UA
+  TOPIC_ID: universal_analytics
 
 jobs:
   setup:
