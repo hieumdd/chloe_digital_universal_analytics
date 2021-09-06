@@ -24,14 +24,10 @@ DATASET = "GoogleAnalytics"
 
 
 class IReport(metaclass=ABCMeta):
-    def __init__(self, email, account, property, view, view_id, start, end):
-        self.email = email
-        self.account = account
-        self.property = property
-        self.view = view
-        self.view_id = view_id
-        self.start = start
-        self.end = end
+    def __init__(self, model):
+        self.view_id = model.view_id
+        self.start = model.start
+        self.end = model.end
 
         self.column_header = {}
         self.rows = []
@@ -232,21 +228,14 @@ class Events(IReport):
 
 
 class UAJob:
-    def __init__(self, email, account, property, view, view_id, start, end):
-        self.email = email
-        self.account = account
-        self.property = property
-        self.view = view
+    def __init__(self, view_id, start, end):
         self.view_id = view_id
         self.start, self.end = self._get_time_range(start, end)
         self.reports = [
-            i(email, account, property, view, view_id, self.start, self.end)
-            for i in [
-                Demographics,
-                Ages,
-                Acquisitions,
-                Events,
-            ]
+            Demographics(self),
+            Ages(self),
+            Acquisitions(self),
+            Events(self),
         ]
 
     def _get_time_range(self, _start, _end):
@@ -258,10 +247,6 @@ class UAJob:
         return start, end
 
     def _get(self):
-        # credentials = ServiceAccountCredentials.from_json_keyfile_dict(
-        #     json.loads(os.getenv("GCP_SA_KEY")),
-        #     scopes=scopes,
-        # )
         credentials = ServiceAccountCredentials.from_json_keyfile_name(
             os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
             scopes=SCOPES,
@@ -298,10 +283,6 @@ class UAJob:
     def run(self):
         num_processed = self._get()
         response = {
-            "email": self.email,
-            "account": self.account,
-            "property": self.property,
-            "view": self.view,
             "view_id": self.view_id,
             "start": self.start,
             "end": self.end,
