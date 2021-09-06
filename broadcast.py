@@ -111,10 +111,6 @@ def broadcast(broadcast_data):
             message_bytes = message_json.encode("utf-8")
             # PUBLISHER_CLIENT.publish(TOPIC_PATH, data=message_bytes).result()
     return {
-        "broadcast": "job",
-        "message_sent": len([i for i in accounts["value"]]),
+        "messages_sent": len([i['value'] for i in accounts]),
+        "broadcast_data": broadcast_data,
     }
-
-
-x = broadcast({})
-x

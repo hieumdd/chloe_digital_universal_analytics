@@ -6,14 +6,15 @@ import pytest
 
 from main import main
 from broadcast import get_token
-from .utils import process
 
 VIEW_ID = "63797302"
+PRINCIPAL_CONTENT_TYPE = "Fashion"
 EMAIL = "metrics@"
 HEADERS = get_token(EMAIL)
 
 ID = {
-    "view_id": "63797302",
+    "view_id": VIEW_ID,
+    "principal_content_type": PRINCIPAL_CONTENT_TYPE,
     "headers": HEADERS,
 }
 
@@ -53,3 +54,21 @@ def test_units(data):
         assert i["num_processed"] >= 0
         if i["num_processed"] > 0:
             assert i["output_rows"] == i["num_processed"]
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {
+            "broadcast": "ga",
+        },
+        {
+            "broadcast": "ga",
+            **DATE,
+        }
+    ],
+    ids=["auto", "manual"],
+)
+def test_broadcast(data):
+    res = run(data)
+    results = res['results']
+    assert results['messages_sent'] > 0

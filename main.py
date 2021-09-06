@@ -14,7 +14,7 @@ def main(request):
 
     if "broadcast" in data:
         results = broadcast(data)
-    elif "view_id" in data:
+    elif "view_id" in data and "broadcast" not in data:
         job = UAJob(
             view_id=data["view_id"],
             principal_content_type=data["principal_content_type"],
