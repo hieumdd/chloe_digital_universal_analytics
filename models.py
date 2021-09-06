@@ -53,11 +53,6 @@ class IReport(metaclass=ABCMeta):
     def table(self):
         return f"{self.report}__{self.view_id}"
 
-    @property
-    def schema(self):
-        with open(f"schemas/{self.report}.json", "r") as f:
-            return json.load(f)
-
     def get_request(self):
         request = {
             "dateRanges": {
@@ -160,6 +155,28 @@ class Demographics(IReport):
         "avgSessionDuration",
         "bounceRate",
     ]
+    schema = [
+        {"name": "date", "type": "STRING"},
+        {"name": "deviceCategory", "type": "STRING"},
+        {"name": "channelGrouping", "type": "STRING"},
+        {"name": "socialNetwork", "type": "STRING"},
+        {"name": "fullReferrer", "type": "STRING"},
+        {"name": "pagePath", "type": "STRING"},
+        {"name": "users", "type": "INTEGER"},
+        {"name": "newUsers", "type": "INTEGER"},
+        {"name": "sessions", "type": "INTEGER"},
+        {"name": "pageviews", "type": "INTEGER"},
+        {"name": "avgSessionDuration", "type": "FLOAT"},
+        {"name": "bounceRate", "type": "FLOAT"},
+        {"name": "avgTimeOnPage", "type": "FLOAT"},
+        {"name": "totalEvents", "type": "INTEGER"},
+        {"name": "uniqueEvents", "type": "INTEGER"},
+        {"name": "_email", "type": "STRING"},
+        {"name": "_account", "type": "STRING"},
+        {"name": "_property", "type": "STRING"},
+        {"name": "_view", "type": "STRING"},
+        {"name": "_batched_at", "type": "TIMESTAMP"},
+    ]
 
 
 class Ages(IReport):
@@ -179,6 +196,25 @@ class Ages(IReport):
         "pageviewsPerSession",
         "avgSessionDuration",
         "bounceRate",
+    ]
+    schema = [
+        {"name": "date", "type": "DATE"},
+        {"name": "deviceCategory", "type": "STRING"},
+        {"name": "channelGrouping", "type": "STRING"},
+        {"name": "userAgeBracket", "type": "STRING"},
+        {"name": "users", "type": "INTEGER"},
+        {"name": "newUsers", "type": "INTEGER"},
+        {"name": "sessionsPerUser", "type": "FLOAT"},
+        {"name": "sessions", "type": "INTEGER"},
+        {"name": "pageviews", "type": "INTEGER"},
+        {"name": "pageviewsPerSession", "type": "FLOAT"},
+        {"name": "avgSessionDuration", "type": "FLOAT"},
+        {"name": "bounceRate", "type": "FLOAT"},
+        {"name": "_email", "type": "STRING"},
+        {"name": "_account", "type": "STRING"},
+        {"name": "_property", "type": "STRING"},
+        {"name": "_view", "type": "STRING"},
+        {"name": "_batched_at", "type": "TIMESTAMP"},
     ]
 
 
@@ -203,6 +239,26 @@ class Acquisitions(IReport):
         "totalEvents",
         "uniqueEvents",
     ]
+    schema = [
+        {"name": "date", "type": "DATE"},
+        {"name": "deviceCategory", "type": "STRING"},
+        {"name": "channelGrouping", "type": "STRING"},
+        {"name": "userType", "type": "STRING"},
+        {"name": "country", "type": "STRING"},
+        {"name": "users", "type": "INTEGER"},
+        {"name": "newUsers", "type": "INTEGER"},
+        {"name": "sessionsPerUser", "type": "FLOAT"},
+        {"name": "sessions", "type": "INTEGER"},
+        {"name": "pageviews", "type": "INTEGER"},
+        {"name": "pageviewsPerSession", "type": "FLOAT"},
+        {"name": "avgSessionDuration", "type": "FLOAT"},
+        {"name": "bounceRate", "type": "FLOAT"},
+        {"name": "_email", "type": "STRING"},
+        {"name": "_account", "type": "STRING"},
+        {"name": "_property", "type": "STRING"},
+        {"name": "_view", "type": "STRING"},
+        {"name": "_batched_at", "type": "TIMESTAMP"},
+    ]
 
 
 class Events(IReport):
@@ -225,10 +281,32 @@ class Events(IReport):
         "totalEvents",
         "uniqueEvents",
     ]
+    schema = [
+        {"name": "date", "type": "STRING"},
+        {"name": "deviceCategory", "type": "STRING"},
+        {"name": "channelGrouping", "type": "STRING"},
+        {"name": "eventCategory", "type": "STRING"},
+        {"name": "eventAction", "type": "STRING"},
+        {"name": "users", "type": "INTEGER"},
+        {"name": "newUsers", "type": "INTEGER"},
+        {"name": "sessions", "type": "INTEGER"},
+        {"name": "pageviews", "type": "INTEGER"},
+        {"name": "avgSessionDuration", "type": "FLOAT"},
+        {"name": "bounceRate", "type": "FLOAT"},
+        {"name": "avgTimeOnPage", "type": "FLOAT"},
+        {"name": "totalEvents", "type": "INTEGER"},
+        {"name": "uniqueEvents", "type": "INTEGER"},
+        {"name": "_email", "type": "STRING"},
+        {"name": "_account", "type": "STRING"},
+        {"name": "_property", "type": "STRING"},
+        {"name": "_view", "type": "STRING"},
+        {"name": "_batched_at", "type": "TIMESTAMP"},
+    ]
 
 
 class UAJob:
-    def __init__(self, view_id, start, end):
+    def __init__(self, headers, view_id, start, end):
+        self.headers = headers
         self.view_id = view_id
         self.start, self.end = self._get_time_range(start, end)
         self.reports = [
