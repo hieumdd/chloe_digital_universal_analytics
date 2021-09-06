@@ -54,10 +54,12 @@ def get_accounts():
             "website": row["fields"].get("Website"),
             "email": row["fields"].get("GA account"),
             "view_id": row["fields"].get("view_id"),
+            "active": row["fields"].get("Membership Status"),
             "principal_content_type": row["fields"].get("Principal Content Type"),
         }
         for row in rows
         if row["fields"].get("GA account")
+        and row["fields"].get("Membership Status") == 'Active'
     ]
     key = lambda x: (x["email"])
     rows_groupby = [
@@ -101,6 +103,7 @@ def broadcast(broadcast_data):
             data = {
                 "headers": headers,
                 "view_id": view["view_id"],
+                "principal_content_type": view["principal_content_type"],
                 "start": broadcast_data.get("start"),
                 "end": broadcast_data.get("end"),
             }
@@ -113,5 +116,5 @@ def broadcast(broadcast_data):
     }
 
 
-# x = broadcast({})
-# x
+x = broadcast({})
+x

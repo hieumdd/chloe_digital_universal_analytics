@@ -23,6 +23,7 @@ DATASET = "GoogleAnalytics"
 class IReport(metaclass=ABCMeta):
     def __init__(self, model):
         self.view_id = model.view_id
+        self.principal_content_type = model.principal_content_type
         self.start = model.start
         self.end = model.end
 
@@ -96,6 +97,7 @@ class IReport(metaclass=ABCMeta):
                 {
                     **dimension_values,
                     **metric_values,
+                    "_principal_content_type": self.principal_content_type,
                     "_batched_at": NOW.isoformat(timespec="seconds"),
                 }
             )
@@ -162,6 +164,7 @@ class Demographics(IReport):
         {"name": "pageviewsPerSession", "type": "FLOAT"},
         {"name": "avgSessionDuration", "type": "FLOAT"},
         {"name": "bounceRate", "type": "FLOAT"},
+        {"name": "_principal_content_type", "type": "STRING"},
         {"name": "_batched_at", "type": "TIMESTAMP"},
     ]
 
@@ -197,6 +200,7 @@ class Ages(IReport):
         {"name": "pageviewsPerSession", "type": "FLOAT"},
         {"name": "avgSessionDuration", "type": "FLOAT"},
         {"name": "bounceRate", "type": "FLOAT"},
+        {"name": "_principal_content_type", "type": "STRING"},
         {"name": "_batched_at", "type": "TIMESTAMP"},
     ]
 
@@ -238,6 +242,7 @@ class Acquisitions(IReport):
         {"name": "avgTimeOnPage", "type": "FLOAT"},
         {"name": "totalEvents", "type": "INTEGER"},
         {"name": "uniqueEvents", "type": "INTEGER"},
+        {"name": "_principal_content_type", "type": "STRING"},
         {"name": "_batched_at", "type": "TIMESTAMP"},
     ]
 
@@ -277,13 +282,15 @@ class Events(IReport):
         {"name": "avgTimeOnPage", "type": "FLOAT"},
         {"name": "totalEvents", "type": "INTEGER"},
         {"name": "uniqueEvents", "type": "INTEGER"},
+        {"name": "_principal_content_type", "type": "STRING"},
         {"name": "_batched_at", "type": "TIMESTAMP"},
     ]
 
 
 class UAJob:
-    def __init__(self, headers, view_id, start, end):
+    def __init__(self, headers, principal_content_type, view_id, start, end):
         self.headers = headers
+        self.principal_content_type = principal_content_type
         self.view_id = view_id
         self.start, self.end = self._get_time_range(start, end)
         self.reports = [

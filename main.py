@@ -17,6 +17,7 @@ def main(request):
     elif "view_id" in data:
         job = UAJob(
             view_id=data["view_id"],
+            principal_content_type=data["principal_content_type"],
             headers=data["headers"],
             start=data.get("start"),
             end=data.get("end"),
