@@ -1,39 +1,55 @@
-import os
+import json
+import base64
+from unittest.mock import Mock
 
-from models import get_headers
+import pytest
+
+from main import main
+from broadcast import get_token
 from .utils import process
 
-EMAIL = ""
-ACCOUNT = "AshleyAndEmily"
-PROPERTY = "AshleyAndEmily"
-VIEW = "AllWebSiteData"
-VIEW_ID = "87741998"
-HEADERS = get_headers(os.getenv('REFRESH_TOKEN'))
+VIEW_ID = "63797302"
+EMAIL = "metrics@"
+HEADERS = get_token(EMAIL)
 
+ID = {
+    "view_id": "63797302",
+    "headers": HEADERS,
+}
 
-START = "2021-06-01"
-END = "2021-06-14"
+START = "2021-09-01"
+END = "2021-09-02"
 
+DATE = {
+    "start": START,
+    "end": END,
+}
 
-def test_single_auto():
-    data = {
-        "email": EMAIL,
-        "account": ACCOUNT,
-        "view": VIEW,
-        "view_id": VIEW_ID,
-        "headers": HEADERS,
+def run(data):
+    data_json = json.dumps(data)
+    data_encoded = base64.b64encode(data_json.encode("utf-8"))
+    message = {
+        "message": {
+            "data": data_encoded,
+        },
     }
-    process(data)
+    req = Mock(get_json=Mock(return_value=message), args=message)
+    res = main(req)
+    return res
 
 
-def test_single_manual():
-    data = {
-        "email": EMAIL,
-        "account": ACCOUNT,
-        "view": VIEW,
-        "view_id": VIEW_ID,
-        "refresh_token": REFRESH_TOKEN,
-        "start": START,
-        "end": END,
-    }
-    process(data)
+@pytest.mark.parametrize(
+    "data",
+    [
+        ID,
+        {**ID, **DATE},
+    ],
+    ids=["auto", "manual"],
+)
+def test_units(data):
+    res = run(data)
+    results = res['results']
+    for i in results['reports']:
+        assert i["num_processed"] >= 0
+        if i["num_processed"] > 0:
+            assert i["output_rows"] == i["num_processed"]

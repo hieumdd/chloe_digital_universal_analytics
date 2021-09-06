@@ -16,7 +16,8 @@ def encode_data(data):
 
 
 def assertion(res):
-    for i in res["results"]:
+    results = res['results']
+    for i in results['reports']:
         assert i["num_processed"] >= 0
         if i["num_processed"] > 0:
             assert i["output_rows"] == i["num_processed"]

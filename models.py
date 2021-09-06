@@ -1,11 +1,8 @@
-import os
-import json
 import time
 from datetime import datetime, timedelta
 from abc import abstractmethod, ABCMeta
 
-from googleapiclient.discovery import build
-from oauth2client.service_account import ServiceAccountCredentials
+import requests
 
 from google.cloud import bigquery
 import jinja2
@@ -99,10 +96,6 @@ class IReport(metaclass=ABCMeta):
                 {
                     **dimension_values,
                     **metric_values,
-                    "_email": self.email,
-                    "_account": self.account,
-                    "_property": self.property,
-                    "_view": self.view,
                     "_batched_at": NOW.isoformat(timespec="seconds"),
                 }
             )
@@ -156,25 +149,19 @@ class Demographics(IReport):
         "bounceRate",
     ]
     schema = [
-        {"name": "date", "type": "STRING"},
+        {"name": "date", "type": "DATE"},
         {"name": "deviceCategory", "type": "STRING"},
         {"name": "channelGrouping", "type": "STRING"},
-        {"name": "socialNetwork", "type": "STRING"},
-        {"name": "fullReferrer", "type": "STRING"},
-        {"name": "pagePath", "type": "STRING"},
+        {"name": "userType", "type": "STRING"},
+        {"name": "country", "type": "STRING"},
         {"name": "users", "type": "INTEGER"},
         {"name": "newUsers", "type": "INTEGER"},
+        {"name": "sessionsPerUser", "type": "FLOAT"},
         {"name": "sessions", "type": "INTEGER"},
         {"name": "pageviews", "type": "INTEGER"},
+        {"name": "pageviewsPerSession", "type": "FLOAT"},
         {"name": "avgSessionDuration", "type": "FLOAT"},
         {"name": "bounceRate", "type": "FLOAT"},
-        {"name": "avgTimeOnPage", "type": "FLOAT"},
-        {"name": "totalEvents", "type": "INTEGER"},
-        {"name": "uniqueEvents", "type": "INTEGER"},
-        {"name": "_email", "type": "STRING"},
-        {"name": "_account", "type": "STRING"},
-        {"name": "_property", "type": "STRING"},
-        {"name": "_view", "type": "STRING"},
         {"name": "_batched_at", "type": "TIMESTAMP"},
     ]
 
@@ -210,10 +197,6 @@ class Ages(IReport):
         {"name": "pageviewsPerSession", "type": "FLOAT"},
         {"name": "avgSessionDuration", "type": "FLOAT"},
         {"name": "bounceRate", "type": "FLOAT"},
-        {"name": "_email", "type": "STRING"},
-        {"name": "_account", "type": "STRING"},
-        {"name": "_property", "type": "STRING"},
-        {"name": "_view", "type": "STRING"},
         {"name": "_batched_at", "type": "TIMESTAMP"},
     ]
 
@@ -240,23 +223,21 @@ class Acquisitions(IReport):
         "uniqueEvents",
     ]
     schema = [
-        {"name": "date", "type": "DATE"},
+        {"name": "date", "type": "STRING"},
         {"name": "deviceCategory", "type": "STRING"},
         {"name": "channelGrouping", "type": "STRING"},
-        {"name": "userType", "type": "STRING"},
-        {"name": "country", "type": "STRING"},
+        {"name": "socialNetwork", "type": "STRING"},
+        {"name": "fullReferrer", "type": "STRING"},
+        {"name": "pagePath", "type": "STRING"},
         {"name": "users", "type": "INTEGER"},
         {"name": "newUsers", "type": "INTEGER"},
-        {"name": "sessionsPerUser", "type": "FLOAT"},
         {"name": "sessions", "type": "INTEGER"},
         {"name": "pageviews", "type": "INTEGER"},
-        {"name": "pageviewsPerSession", "type": "FLOAT"},
         {"name": "avgSessionDuration", "type": "FLOAT"},
         {"name": "bounceRate", "type": "FLOAT"},
-        {"name": "_email", "type": "STRING"},
-        {"name": "_account", "type": "STRING"},
-        {"name": "_property", "type": "STRING"},
-        {"name": "_view", "type": "STRING"},
+        {"name": "avgTimeOnPage", "type": "FLOAT"},
+        {"name": "totalEvents", "type": "INTEGER"},
+        {"name": "uniqueEvents", "type": "INTEGER"},
         {"name": "_batched_at", "type": "TIMESTAMP"},
     ]
 
@@ -296,10 +277,6 @@ class Events(IReport):
         {"name": "avgTimeOnPage", "type": "FLOAT"},
         {"name": "totalEvents", "type": "INTEGER"},
         {"name": "uniqueEvents", "type": "INTEGER"},
-        {"name": "_email", "type": "STRING"},
-        {"name": "_account", "type": "STRING"},
-        {"name": "_property", "type": "STRING"},
-        {"name": "_view", "type": "STRING"},
         {"name": "_batched_at", "type": "TIMESTAMP"},
     ]
 
@@ -325,28 +302,26 @@ class UAJob:
         return start, end
 
     def _get(self):
-        credentials = ServiceAccountCredentials.from_json_keyfile_name(
-            os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
-            scopes=SCOPES,
-        )
-        service = build("analyticsreporting", "v4", credentials=credentials)
-        while True:
-            request_body = {
-                "reportRequests": [report.get_request() for report in self.reports],
-            }
-            res = service.reports().batchGet(body=request_body).execute()
-            _reports = res["reports"]
-            for report, report_res in zip(self.reports, _reports):
-                report.column_header = report_res["columnHeader"]
-                if not report.get_done:
-                    report.rows.extend(report_res["data"]["rows"])
-                next_page_token = report_res.get("nextPageToken")
-                if next_page_token:
-                    report.next_page_token = next_page_token
-                else:
-                    report.get_done = True
-            if not [report for report in self.reports if report.get_done is False]:
-                break
+        url = "https://analyticsreporting.googleapis.com/v4/reports:batchGet"
+        with requests.Session() as session:
+            while True:
+                request_body = {
+                    "reportRequests": [report.get_request() for report in self.reports],
+                }
+                with session.post(url, json=request_body, headers=self.headers) as r:
+                    res = r.json()
+                _reports = res["reports"]
+                for report, report_res in zip(self.reports, _reports):
+                    report.column_header = report_res["columnHeader"]
+                    if not report.get_done:
+                        report.rows.extend(report_res["data"]["rows"])
+                    next_page_token = report_res.get("nextPageToken")
+                    if next_page_token:
+                        report.next_page_token = next_page_token
+                    else:
+                        report.get_done = True
+                if not [report for report in self.reports if report.get_done is False]:
+                    break
         return sum([len(report.rows) for report in self.reports])
 
     def _transform(self):

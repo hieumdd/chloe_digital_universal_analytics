@@ -3,27 +3,33 @@ import json
 import itertools
 
 import requests
-from google.cloud import pubsub_v1
-import jinja2
+from google.cloud import pubsub_v1, secretmanager
 
-from models import get_headers
 
 BASE_ID = "apporLbA6XsKHTKpz"
+VIEW = "Sorted by GA"
 
-TEMPLATE_LOADER = jinja2.FileSystemLoader(searchpath="./templates")
-TEMPLATE_ENV = jinja2.Environment(loader=TEMPLATE_LOADER)
 
-PUBLISHER = pubsub_v1.PublisherClient()
-TOPIC_PATH = PUBLISHER.topic_path(os.getenv("PROJECT_ID"), os.getenv("TOPIC_ID"))
+PUBLISHER_CLIENT = pubsub_v1.PublisherClient()
+TOPIC_PATH = PUBLISHER_CLIENT.topic_path(os.getenv("PROJECT_ID"), os.getenv("TOPIC_ID"))
+
+SECRET_CLIENT = secretmanager.SecretManagerServiceClient()
+SECRET_MAP = [
+    {
+        "email": "metrics@",
+        "secret": ("ga_metrics_refresh_token", 1),
+    },
+]
 
 
 def get_accounts():
     url = f"https://api.airtable.com/v0/{BASE_ID}/CLIENT%20DETAILS"
     params = {
-        "view": "Active By Tier",
+        "view": VIEW,
         "fields%5B%5D": [
             "Website",
             "GA account",
+            "Principle Content Type",
         ],
     }
     rows = []
@@ -47,12 +53,13 @@ def get_accounts():
         {
             "website": row["fields"].get("Website"),
             "email": row["fields"].get("GA account"),
-            "refresh_token": "refresh_token",
+            "view_id": row["fields"].get("view_id"),
+            "principal_content_type": row["fields"].get("Principal Content Type"),
         }
         for row in rows
         if row["fields"].get("GA account")
     ]
-    key = lambda x: (x["email"], x["refresh_token"])
+    key = lambda x: (x["email"])
     rows_groupby = [
         {
             "key": k,
@@ -60,52 +67,51 @@ def get_accounts():
         }
         for k, v in itertools.groupby(sorted(rows, key=key), key)
     ]
+    rows_groupby = [i for i in rows_groupby if i["key"] == "metrics@"]
     return rows_groupby
 
 
-def publish(data):
-    message_json = json.dumps(data)
-    message_bytes = message_json.encode("utf-8")
-    PUBLISHER.publish(TOPIC_PATH, data=message_bytes).result()
-
-
-def broadcast_job(broadcast_data):
-    headers = get_headers(broadcast_data["refresh_token"])
-    value = broadcast_data["value"]
-    for job in value:
-        data = {
-            "headers": headers,
-            "email": job["email"],
-            "account": job["account"],
-            "property": job["property"],
-            "view": job["view"],
-            "view_id": job["view_id"],
-            "start": broadcast_data.get("start"),
-            "end": broadcast_data.get("end"),
-        }
-        publish(data)
+def get_token(email):
+    secret_id, version_id = [i["secret"] for i in SECRET_MAP if i["email"] == email][0]
+    name = (
+        f"projects/{os.getenv('PROJECT_ID')}/secrets/{secret_id}/versions/{version_id}"
+    )
+    response = SECRET_CLIENT.access_secret_version(request={"name": name})
+    refresh_token = response.payload.data.decode("UTF-8")
+    params = {
+        "client_id": os.getenv("CLIENT_ID"),
+        "client_secret": os.getenv("CLIENT_SECRET"),
+        "refresh_token": refresh_token,
+        "grant_type": "refresh_token",
+    }
+    with requests.post("https://oauth2.googleapis.com/token", params=params) as r:
+        access_token = r.json()["access_token"]
     return {
-        "broadcast": "job",
-        "email": broadcast_data["key"]["email"],
-        "message_sent": len(value),
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
     }
 
 
-def broadcast_email(broadcast_data):
+def broadcast(broadcast_data):
     accounts = get_accounts()
     for account in accounts:
-        data = {
-            "email": account["key"][0],
-            "refresh_token": account["key"][1],
-            "value": account["value"],
-            "start": broadcast_data.get("start"),
-            "end": broadcast_data.get("end"),
-        }
-        data
-        # publish(data)
+        headers = get_token(account["key"])
+        for view in account["value"]:
+            data = {
+                "headers": headers,
+                "view_id": view["view_id"],
+                "start": broadcast_data.get("start"),
+                "end": broadcast_data.get("end"),
+            }
+            message_json = json.dumps(data)
+            message_bytes = message_json.encode("utf-8")
+            # PUBLISHER_CLIENT.publish(TOPIC_PATH, data=message_bytes).result()
     return {
-        "broadcast": "email",
-        "message_sent": len(accounts),
+        "broadcast": "job",
+        "message_sent": len([i for i in accounts["value"]]),
     }
 
-broadcast_email({})
+
+# x = broadcast({})
+# x
