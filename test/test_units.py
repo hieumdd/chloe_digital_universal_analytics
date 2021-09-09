@@ -7,8 +7,8 @@ import pytest
 from main import main
 from broadcast import get_token
 
-VIEW_ID = "63797302"
-PRINCIPAL_CONTENT_TYPE = "Fashion"
+VIEW_ID = "81522583"
+PRINCIPAL_CONTENT_TYPE = "Food"
 EMAIL = "metrics@"
 HEADERS = get_token(EMAIL)
 

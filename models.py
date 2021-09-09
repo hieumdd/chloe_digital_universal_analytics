@@ -77,31 +77,34 @@ class IReport(metaclass=ABCMeta):
         return request
 
     def transform(self):
-        dimension_header = self.column_header["dimensions"]
-        metric_header = self.column_header["metricHeader"]["metricHeaderEntries"]
-        dimension_header = [
-            (lambda x: x.replace("ga:", ""))(i) for i in dimension_header
-        ]
-        metric_header = [
-            (lambda x: x["name"].replace("ga:", ""))(i) for i in metric_header
-        ]
+        if self.rows:
+            dimension_header = self.column_header["dimensions"]
+            metric_header = self.column_header["metricHeader"]["metricHeaderEntries"]
+            dimension_header = [
+                (lambda x: x.replace("ga:", ""))(i) for i in dimension_header
+            ]
+            metric_header = [
+                (lambda x: x["name"].replace("ga:", ""))(i) for i in metric_header
+            ]
 
-        rows = []
-        for row in self.rows:
-            dimension_values = dict(zip(dimension_header, row["dimensions"]))
-            metric_values = dict(zip(metric_header, row["metrics"][0]["values"]))
-            dimension_values["date"] = datetime.strptime(
-                dimension_values["date"], "%Y%m%d"
-            ).strftime(DATE_FORMAT)
-            rows.append(
-                {
-                    **dimension_values,
-                    **metric_values,
-                    "_principal_content_type": self.principal_content_type,
-                    "_batched_at": NOW.isoformat(timespec="seconds"),
-                }
-            )
-        self.rows = rows
+            rows = []
+            for row in self.rows:
+                dimension_values = dict(zip(dimension_header, row["dimensions"]))
+                metric_values = dict(zip(metric_header, row["metrics"][0]["values"]))
+                dimension_values["date"] = datetime.strptime(
+                    dimension_values["date"], "%Y%m%d"
+                ).strftime(DATE_FORMAT)
+                rows.append(
+                    {
+                        **dimension_values,
+                        **metric_values,
+                        "_principal_content_type": self.principal_content_type,
+                        "_batched_at": NOW.isoformat(timespec="seconds"),
+                    }
+                )
+            self.rows = rows
+        else:
+            self.output_rows = None
 
     def load(self):
         job = BQ_CLIENT.load_table_from_json(
@@ -118,7 +121,7 @@ class IReport(metaclass=ABCMeta):
 
     def _load_callback(self, job):
         self._update()
-        self.loads = job.result()
+        self.output_rows = job.result().output_rows
 
     def _update(self):
         template = TEMPLATE_ENV.get_template("update_from_stage.sql.j2")
@@ -315,22 +318,20 @@ class UAJob:
                 request_body = {
                     "reportRequests": [report.get_request() for report in self.reports],
                 }
-                try:
-                    r = session.post(url, json=request_body, headers=self.headers)
+                with session.post(url, json=request_body, headers=self.headers) as r:
                     r.raise_for_status()
                     res = r.json()
-                except Exception as e:
-                    print(r.json())
-                    raise e
                 _reports = res["reports"]
                 for report, report_res in zip(self.reports, _reports):
                     report.column_header = report_res["columnHeader"]
-                    print(report_res)
-                    if not report.get_done:
-                        report.rows.extend(report_res["data"]["rows"])
-                    next_page_token = report_res.get("nextPageToken")
-                    if next_page_token:
-                        report.next_page_token = next_page_token
+                    if report_res["data"].get('rows', []):
+                        if not report.get_done:
+                            report.rows.extend(report_res["data"]["rows"])
+                        next_page_token = report_res.get("nextPageToken")
+                        if next_page_token:
+                            report.next_page_token = next_page_token
+                        else:
+                            report.get_done = True
                     else:
                         report.get_done = True
                 if not [report for report in self.reports if report.get_done is False]:
@@ -341,10 +342,9 @@ class UAJob:
         [report.transform() for report in self.reports]
 
     def _load(self):
-        load_jobs = [report.load() for report in self.reports]
+        load_jobs = [report.load() for report in self.reports if report.rows]
         while [job for job in load_jobs if job.state != "DONE"]:
             time.sleep(5)
-        return [report.loads for report in self.reports]
 
     def run(self):
         num_processed = self._get()
@@ -366,7 +366,7 @@ class UAJob:
             response["reports"] = [
                 {
                     **report_res,
-                    "output_rows": report.loads.output_rows,
+                    "output_rows": report.output_rows,
                 }
                 for report, report_res in zip(self.reports, response["reports"])
             ]
