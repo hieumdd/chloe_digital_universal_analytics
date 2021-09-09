@@ -30,6 +30,7 @@ def get_accounts():
             "Website",
             "GA account",
             "Principle Content Type",
+            "GA ID",
         ],
     }
     rows = []
@@ -53,7 +54,7 @@ def get_accounts():
         {
             "website": row["fields"].get("Website"),
             "email": row["fields"].get("GA account"),
-            "view_id": row["fields"].get("view_id"),
+            "view_id": row["fields"].get("GA ID"),
             "active": row["fields"].get("Membership Status"),
             "principal_content_type": row["fields"].get("Principal Content Type"),
         }
