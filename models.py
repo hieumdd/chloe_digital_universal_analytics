@@ -291,7 +291,7 @@ class Events(IReport):
 
 
 class UAJob:
-    def __init__(self, headers, view_id, principal_content_type,  start, end):
+    def __init__(self, headers, view_id, principal_content_type, start, end):
         self.headers = headers
         self.view_id = view_id
         self.principal_content_type = principal_content_type
@@ -324,7 +324,7 @@ class UAJob:
                 _reports = res["reports"]
                 for report, report_res in zip(self.reports, _reports):
                     report.column_header = report_res["columnHeader"]
-                    if report_res["data"].get('rows', []):
+                    if report_res["data"].get("rows", []):
                         if not report.get_done:
                             report.rows.extend(report_res["data"]["rows"])
                         next_page_token = report_res.get("nextPageToken")
@@ -343,7 +343,7 @@ class UAJob:
 
     def _load(self):
         load_jobs = [report.load() for report in self.reports if report.rows]
-        while [job for job in load_jobs if job.state != "DONE"]:
+        while [job for job in load_jobs if job.state not in ("DONE", "SUCCESS")]:
             time.sleep(5)
 
     def run(self):
