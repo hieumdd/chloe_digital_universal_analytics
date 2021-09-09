@@ -10,7 +10,7 @@ import jinja2
 NOW = datetime.utcnow()
 DATE_FORMAT = "%Y-%m-%d"
 
-SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
+# SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
 PAGE_SIZE = 50000
 
 TEMPLATE_LOADER = jinja2.FileSystemLoader(searchpath="./templates")
@@ -288,10 +288,10 @@ class Events(IReport):
 
 
 class UAJob:
-    def __init__(self, headers, principal_content_type, view_id, start, end):
+    def __init__(self, headers, view_id, principal_content_type,  start, end):
         self.headers = headers
-        self.principal_content_type = principal_content_type
         self.view_id = view_id
+        self.principal_content_type = principal_content_type
         self.start, self.end = self._get_time_range(start, end)
         self.reports = [
             Demographics(self),
@@ -315,8 +315,13 @@ class UAJob:
                 request_body = {
                     "reportRequests": [report.get_request() for report in self.reports],
                 }
-                with session.post(url, json=request_body, headers=self.headers) as r:
+                try:
+                    r = session.post(url, json=request_body, headers=self.headers)
+                    r.raise_for_status()
                     res = r.json()
+                except Exception as e:
+                    print(r.json())
+                    raise e
                 _reports = res["reports"]
                 for report, report_res in zip(self.reports, _reports):
                     report.column_header = report_res["columnHeader"]

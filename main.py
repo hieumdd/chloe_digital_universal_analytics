@@ -16,9 +16,9 @@ def main(request):
         results = broadcast(data)
     elif "view_id" in data and "broadcast" not in data:
         job = UAJob(
+            headers=data["headers"],
             view_id=data["view_id"],
             principal_content_type=data["principal_content_type"],
-            headers=data["headers"],
             start=data.get("start"),
             end=data.get("end"),
         )
