@@ -22,15 +22,15 @@ jobs:
           service_account_key: ${{ secrets.GCP_SA_KEY }}
           export_default_credentials: true
 
-      - name: Deploy to Cloud Functions          
+      - name: Deploy to Cloud Functions
         run: >-
           gcloud functions deploy ${{ env.FUNCTIONS_NAME }}
           --entry-point=main
           --region=${{ env.REGION }}
           --timeout=530
           --project=${{ secrets.PROJECT_ID }}
-          --memory=512MB
+          --memory=1024MB
           --runtime=python38
           --trigger-http
           --service-account=${{ secrets.GCP_SA }}
-          --set-env-vars=CLIENT_ID=${{ secrets.CLIENT_ID }},CLIENT_SECRET=${{ secrets.CLIENT_SECRET }},REFRESH_TOKEN=${{ secrets.REFRESH_TOKEN }},PROJECT_ID=${{ secrets.PROJECT_ID }},TOPIC_ID=${{ env.TOPIC_ID }}
+          --set-env-vars=CLIENT_ID=${{ secrets.CLIENT_ID }},CLIENT_SECRET=${{ secrets.CLIENT_SECRET }},AIRTABLE_API_KEY=${{ secrets.AIRTABLE_API_KEY }},PROJECT_ID=${{ secrets.PROJECT_ID }},TOPIC_ID=${{ env.TOPIC_ID }}
