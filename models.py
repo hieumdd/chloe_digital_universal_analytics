@@ -325,6 +325,7 @@ class UAJob:
                 _reports = res["reports"]
                 for report, report_res in zip(self.reports, _reports):
                     report.column_header = report_res["columnHeader"]
+                    print(report_res)
                     if not report.get_done:
                         report.rows.extend(report_res["data"]["rows"])
                     next_page_token = report_res.get("nextPageToken")
