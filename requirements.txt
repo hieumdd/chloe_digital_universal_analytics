@@ -20,7 +20,7 @@ google-crc32c==1.1.2; python_version >= '3.6'
 google-resumable-media==2.0.2; python_version >= '3.6'
 googleapis-common-protos[grpc]==1.53.0; python_version >= '3.6'
 grpc-google-iam-v1==0.12.3
-grpcio==1.39.0
+grpcio==1.40.0
 idna==3.2; python_version >= '3'
 jinja2==3.0.1
 libcst==0.3.20; python_version >= '3.6'
