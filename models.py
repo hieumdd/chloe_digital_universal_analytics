@@ -130,7 +130,7 @@ class IReport(metaclass=ABCMeta):
             dataset=DATASET,
             table=self.table,
             p_key=",".join(self.dimensions),
-            incremental_key="_batched_at",
+            incre_key="_batched_at",
         )
         BQ_CLIENT.query(rendered_query)
 
