@@ -8,12 +8,14 @@ from main import main
 from broadcast import get_token
 
 VIEW_ID = "81522583"
+WEBSITE = "http://www.decotartelette.com"
 PRINCIPAL_CONTENT_TYPE = "Food"
 EMAIL = "metrics@"
 HEADERS = get_token(EMAIL)
 
 ID = {
     "view_id": VIEW_ID,
+    "website": WEBSITE,
     "principal_content_type": PRINCIPAL_CONTENT_TYPE,
     "headers": HEADERS,
 }

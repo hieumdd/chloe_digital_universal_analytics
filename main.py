@@ -18,6 +18,7 @@ def main(request):
         job = UAJob(
             headers=data["headers"],
             view_id=data["view_id"],
+            website=data["website"],
             principal_content_type=data["principal_content_type"],
             start=data.get("start"),
             end=data.get("end"),

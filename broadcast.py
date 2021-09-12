@@ -104,6 +104,7 @@ def broadcast(broadcast_data):
             data = {
                 "headers": headers,
                 "view_id": view["view_id"],
+                "website": view["website"],
                 "principal_content_type": view["principal_content_type"],
                 "start": broadcast_data.get("start"),
                 "end": broadcast_data.get("end"),

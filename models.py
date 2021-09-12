@@ -10,7 +10,6 @@ import jinja2
 NOW = datetime.utcnow()
 DATE_FORMAT = "%Y-%m-%d"
 
-# SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
 PAGE_SIZE = 50000
 
 TEMPLATE_LOADER = jinja2.FileSystemLoader(searchpath="./templates")
@@ -23,6 +22,7 @@ DATASET = "GoogleAnalytics"
 class IReport(metaclass=ABCMeta):
     def __init__(self, model):
         self.view_id = model.view_id
+        self.website = model.website
         self.principal_content_type = model.principal_content_type
         self.start = model.start
         self.end = model.end
@@ -98,6 +98,7 @@ class IReport(metaclass=ABCMeta):
                     {
                         **dimension_values,
                         **metric_values,
+                        "_website": self.website,
                         "_principal_content_type": self.principal_content_type,
                         "_batched_at": NOW.isoformat(timespec="seconds"),
                     }
@@ -167,6 +168,7 @@ class Demographics(IReport):
         {"name": "pageviewsPerSession", "type": "FLOAT"},
         {"name": "avgSessionDuration", "type": "FLOAT"},
         {"name": "bounceRate", "type": "FLOAT"},
+        {"name": "_website", "type": "STRING"},
         {"name": "_principal_content_type", "type": "STRING"},
         {"name": "_batched_at", "type": "TIMESTAMP"},
     ]
@@ -203,6 +205,7 @@ class Ages(IReport):
         {"name": "pageviewsPerSession", "type": "FLOAT"},
         {"name": "avgSessionDuration", "type": "FLOAT"},
         {"name": "bounceRate", "type": "FLOAT"},
+        {"name": "_website", "type": "STRING"},
         {"name": "_principal_content_type", "type": "STRING"},
         {"name": "_batched_at", "type": "TIMESTAMP"},
     ]
@@ -245,6 +248,7 @@ class Acquisitions(IReport):
         {"name": "avgTimeOnPage", "type": "FLOAT"},
         {"name": "totalEvents", "type": "INTEGER"},
         {"name": "uniqueEvents", "type": "INTEGER"},
+        {"name": "_website", "type": "STRING"},
         {"name": "_principal_content_type", "type": "STRING"},
         {"name": "_batched_at", "type": "TIMESTAMP"},
     ]
@@ -285,15 +289,17 @@ class Events(IReport):
         {"name": "avgTimeOnPage", "type": "FLOAT"},
         {"name": "totalEvents", "type": "INTEGER"},
         {"name": "uniqueEvents", "type": "INTEGER"},
+        {"name": "_website", "type": "STRING"},
         {"name": "_principal_content_type", "type": "STRING"},
         {"name": "_batched_at", "type": "TIMESTAMP"},
     ]
 
 
 class UAJob:
-    def __init__(self, headers, view_id, principal_content_type, start, end):
+    def __init__(self, headers, view_id, website, principal_content_type, start, end):
         self.headers = headers
         self.view_id = view_id
+        self.website = website
         self.principal_content_type = principal_content_type
         self.start, self.end = self._get_time_range(start, end)
         self.reports = [
