@@ -28,6 +28,7 @@ DATE = {
     "end": END,
 }
 
+
 def run(data):
     data_json = json.dumps(data)
     data_encoded = base64.b64encode(data_json.encode("utf-8"))
@@ -51,11 +52,12 @@ def run(data):
 )
 def test_units(data):
     res = run(data)
-    results = res['results']
-    for i in results['reports']:
+    results = res["results"]
+    for i in results["reports"]:
         assert i["num_processed"] >= 0
         if i["num_processed"] > 0:
             assert i["output_rows"] == i["num_processed"]
+
 
 @pytest.mark.parametrize(
     "data",
@@ -66,11 +68,11 @@ def test_units(data):
         {
             "broadcast": "ga",
             **DATE,
-        }
+        },
     ],
     ids=["auto", "manual"],
 )
 def test_broadcast(data):
     res = run(data)
-    results = res['results']
-    assert results['messages_sent'] > 0
+    results = res["results"]
+    assert results["messages_sent"] > 0

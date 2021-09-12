@@ -60,7 +60,7 @@ def get_accounts():
         }
         for row in rows
         if row["fields"].get("GA account")
-        and row["fields"].get("Membership Status") == 'Active'
+        and row["fields"].get("Membership Status") == "Active"
     ]
     key = lambda x: (x["email"])
     rows_groupby = [
@@ -113,6 +113,6 @@ def broadcast(broadcast_data):
             message_bytes = message_json.encode("utf-8")
             PUBLISHER_CLIENT.publish(TOPIC_PATH, data=message_bytes).result()
     return {
-        "messages_sent": len([i for j in [i['value'] for i in accounts] for i in j]),
+        "messages_sent": len([i for j in [i["value"] for i in accounts] for i in j]),
         "broadcast_data": broadcast_data,
     }
