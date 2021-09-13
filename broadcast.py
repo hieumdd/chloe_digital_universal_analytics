@@ -19,6 +19,34 @@ SECRET_MAP = [
         "email": "metrics@",
         "secret": ("ga_metrics_refresh_token", 1),
     },
+    {
+        "email": "analytics@",
+        "secret": ("ga_analytics_refresh_token", 1),
+    },
+    {
+        "email": "cdbabe@",
+        "secret": ("ga_cdbabe_refresh_token", 1),
+    },
+    {
+        "email": "ga@",
+        "secret": ("ga_ga_refresh_token", 1),
+    },
+    {
+        "email": "hello@",
+        "secret": ("ga_hello_refresh_token", 1),
+    },
+    {
+        "email": "info@",
+        "secret": ("ga_info_refresh_token", 1),
+    },
+    {
+        "email": "poweredby@",
+        "secret": ("ga_poweredby_refresh_token", 1),
+    },
+    {
+        "email": "support@",
+        "secret": ("ga_support_refresh_token", 1),
+    },
 ]
 
 
@@ -70,7 +98,7 @@ def get_accounts():
         }
         for k, v in itertools.groupby(sorted(rows, key=key), key)
     ]
-    rows_groupby = [i for i in rows_groupby if i["key"] == "metrics@"]
+    # rows_groupby = [i for i in rows_groupby if i["key"] == "metrics@"]
     return rows_groupby
 
 
@@ -100,6 +128,7 @@ def broadcast(broadcast_data):
     accounts = get_accounts()
     for account in accounts:
         headers = get_token(account["key"])
+        headers
         for view in account["value"]:
             data = {
                 "headers": headers,
