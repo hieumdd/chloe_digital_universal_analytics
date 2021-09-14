@@ -7,7 +7,7 @@ on:
 env:
   FUNCTIONS_NAME: chloe_digital_universal_analytics
   REGION: us-central1
-  TOPIC_ID: universal_analytics
+  QUEUE_ID: universal-analytics
 
 jobs:
   setup:
@@ -33,4 +33,4 @@ jobs:
           --runtime=python38
           --trigger-http
           --service-account=${{ secrets.GCP_SA }}
-          --set-env-vars=CLIENT_ID=${{ secrets.CLIENT_ID }},CLIENT_SECRET=${{ secrets.CLIENT_SECRET }},AIRTABLE_API_KEY=${{ secrets.AIRTABLE_API_KEY }},PROJECT_ID=${{ secrets.PROJECT_ID }},TOPIC_ID=${{ env.TOPIC_ID }}
+          --set-env-vars=CLIENT_ID=${{ secrets.CLIENT_ID }},CLIENT_SECRET=${{ secrets.CLIENT_SECRET }},AIRTABLE_API_KEY=${{ secrets.AIRTABLE_API_KEY }},PROJECT_ID=${{ secrets.PROJECT_ID }},QUEUE_ID=${{ env.QUEUE_ID }},REGION=${{ env.REGION }},FUNCTION_NAME=${{ env.FUNCTION_NAME }},GCP_SA=${{ secrets.GCP_SA }}

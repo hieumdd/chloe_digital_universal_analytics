@@ -9,6 +9,7 @@ google-cloud-bigquery = "*"
 google-cloud-pubsub = "*"
 jinja2 = "*"
 google-cloud-secret-manager = "*"
+google-cloud-tasks = "*"
 
 [dev-packages]
 black = "*"
