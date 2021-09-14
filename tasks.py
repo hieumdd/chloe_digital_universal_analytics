@@ -180,5 +180,5 @@ def create_tasks(tasks_data):
     ]
     return {
         "messages_sent": len(responses),
-        "broadcast_data": tasks_data,
+        "tasks_data": tasks_data,
     }

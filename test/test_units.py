@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from main import main
-from broadcast import get_token
+from tasks import get_token
 
 VIEW_ID = "101307510"
 WEBSITE = "whimsysoul.com"
@@ -55,16 +55,16 @@ def test_units(data):
     "data",
     [
         {
-            "broadcast": "ga",
+            "tasks": "ga",
         },
         {
-            "broadcast": "ga",
+            "tasks": "ga",
             **DATE,
         },
     ],
     ids=["auto", "manual"],
 )
-def test_broadcast(data):
+def test_tasks(data):
     res = run(data)
     results = res["results"]
     assert results["messages_sent"] > 0
