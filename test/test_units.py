@@ -1,5 +1,3 @@
-import json
-import base64
 from unittest.mock import Mock
 
 import pytest
@@ -31,14 +29,7 @@ DATE = {
 
 
 def run(data):
-    data_json = json.dumps(data)
-    data_encoded = base64.b64encode(data_json.encode("utf-8"))
-    message = {
-        "message": {
-            "data": data_encoded,
-        },
-    }
-    req = Mock(get_json=Mock(return_value=message), args=message)
+    req = Mock(get_json=Mock(return_value=data), args=data)
     res = main(req)
     return res
 
