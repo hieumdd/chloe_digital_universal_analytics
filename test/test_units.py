@@ -7,10 +7,10 @@ import pytest
 from main import main
 from broadcast import get_token
 
-VIEW_ID = "81522583"
-WEBSITE = "http://www.decotartelette.com"
-PRINCIPAL_CONTENT_TYPE = "Food"
-EMAIL = "metrics@"
+VIEW_ID = "101307510"
+WEBSITE = "whimsysoul.com"
+PRINCIPAL_CONTENT_TYPE = "Travel"
+EMAIL = "cdbabe@"
 HEADERS = get_token(EMAIL)
 
 ID = {
@@ -20,8 +20,9 @@ ID = {
     "headers": HEADERS,
 }
 
+
 START = "2021-09-01"
-END = "2021-09-02"
+END = "2021-09-14"
 
 DATE = {
     "start": START,

@@ -128,7 +128,6 @@ def broadcast(broadcast_data):
     accounts = get_accounts()
     for account in accounts:
         headers = get_token(account["key"])
-        headers
         for view in account["value"]:
             data = {
                 "headers": headers,

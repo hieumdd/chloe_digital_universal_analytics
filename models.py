@@ -104,8 +104,6 @@ class IReport(metaclass=ABCMeta):
                     }
                 )
             self.rows = rows
-        else:
-            self.output_rows = None
 
     def load(self):
         job = BQ_CLIENT.load_table_from_json(
@@ -345,9 +343,11 @@ class UAJob:
         return sum([len(report.rows) for report in self.reports])
 
     def _transform(self):
+        self
         [report.transform() for report in self.reports]
 
     def _load(self):
+        zxz = [report for report in self.reports if report.rows]
         load_jobs = [report.load() for report in self.reports if report.rows]
         while [job for job in load_jobs if job.state not in ("DONE", "SUCCESS")]:
             time.sleep(5)
@@ -372,7 +372,7 @@ class UAJob:
             response["reports"] = [
                 {
                     **report_res,
-                    "output_rows": report.output_rows,
+                    "output_rows": getattr(report, "output_rows", None),
                 }
                 for report, report_res in zip(self.reports, response["reports"])
             ]
