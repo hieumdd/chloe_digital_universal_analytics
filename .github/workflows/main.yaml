@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 env:
-  FUNCTIONS_NAME: chloe_digital_universal_analytics
+  FUNCTION_NAME: chloe_digital_universal_analytics
   REGION: us-central1
   QUEUE_ID: universal-analytics
 
@@ -24,7 +24,7 @@ jobs:
 
       - name: Deploy to Cloud Functions
         run: >-
-          gcloud functions deploy ${{ env.FUNCTIONS_NAME }}
+          gcloud functions deploy ${{ env.FUNCTION_NAME }}
           --entry-point=main
           --region=${{ env.REGION }}
           --timeout=530
