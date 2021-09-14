@@ -1,13 +1,13 @@
 from models import UAJob
-from broadcast import broadcast
+from tasks import create_tasks
 
 
 def main(request):
     data = request.get_json()
     print(data)
 
-    if "broadcast" in data:
-        results = broadcast(data)
+    if "tasks" in data:
+        results = create_tasks(data)
     elif "view_id" in data and "broadcast" not in data:
         job = UAJob(
             headers=data["headers"],
