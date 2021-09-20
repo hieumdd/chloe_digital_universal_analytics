@@ -30,7 +30,7 @@ jobs:
           --timeout=530
           --project=${{ secrets.PROJECT_ID }}
           --memory=1024MB
-          --runtime=python38
+          --runtime=python39
           --trigger-http
           --service-account=${{ secrets.GCP_SA }}
           --set-env-vars=CLIENT_ID=${{ secrets.CLIENT_ID }},CLIENT_SECRET=${{ secrets.CLIENT_SECRET }},AIRTABLE_API_KEY=${{ secrets.AIRTABLE_API_KEY }},PROJECT_ID=${{ secrets.PROJECT_ID }},QUEUE_ID=${{ env.QUEUE_ID }},REGION=${{ env.REGION }},FUNCTION_NAME=${{ env.FUNCTION_NAME }},GCP_SA=${{ secrets.GCP_SA }}

@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "chloe_digital_universal_analytics"
+version = "2.0.0"
+description = ""
+authors = ["HM <hieumdd@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "~3.9"
+requests = "^2.26.0"
+google-cloud-bigquery = "^2.26.0"
+Jinja2 = "^3.0.1"
+google-cloud-secret-manager = "^2.7.1"
+google-cloud-tasks = "^2.5.1"
+
+[tool.poetry.dev-dependencies]
+black = "^21.9b0"
+pytest = "^6.2.5"
+pytest-timeout = "^1.4.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+addopts = "-s --durations=0"
+testpaths = [
+    "test",
+]
