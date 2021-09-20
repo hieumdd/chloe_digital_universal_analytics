@@ -56,6 +56,12 @@ PARENT = TASKS_CLIENT.queue_path(*CLOUD_TASKS_PATH)
 
 
 def get_accounts():
+    """Get accounts list from Airtable
+
+    Returns:
+        list: List of accounts
+    """
+
     url = f"https://api.airtable.com/v0/{BASE_ID}/CLIENT%20DETAILS"
     params = {
         "view": VIEW,
@@ -107,6 +113,15 @@ def get_accounts():
 
 
 def get_token(email):
+    """Get accounts' tokens from Secret Manager
+
+    Args:
+        email (str): Account's email
+
+    Returns:
+        dict: HTTP Headers
+    """
+
     secret_id, version_id = [i["secret"] for i in SECRET_MAP if i["email"] == email][0]
     name = (
         f"projects/{os.getenv('PROJECT_ID')}/secrets/{secret_id}/versions/{version_id}"
@@ -129,6 +144,15 @@ def get_token(email):
 
 
 def create_tasks(tasks_data):
+    """Create tasks and put into queue
+
+    Args:
+        tasks_data (dict): Task request
+
+    Returns:
+        dict: Job Response
+    """
+
     accounts = get_accounts()
     accounts_headers = [
         {

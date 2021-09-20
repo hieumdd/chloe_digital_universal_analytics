@@ -17,6 +17,12 @@ DATASET = "GoogleAnalytics"
 
 class IReport(metaclass=ABCMeta):
     def __init__(self, model):
+        """Report Interface
+
+        Args:
+            model (UAJobs): UAJobs
+        """
+                
         self.view_id = model.view_id
         self.website = model.website
         self.principal_content_type = model.principal_content_type
@@ -48,6 +54,12 @@ class IReport(metaclass=ABCMeta):
         return f"{self.report}__{self.view_id}"
 
     def get_request(self):
+        """Build request payload
+
+        Returns:
+            dict: Request payload
+        """
+
         request = {
             "dateRanges": {
                 "startDate": self.start,
@@ -73,6 +85,8 @@ class IReport(metaclass=ABCMeta):
         return request
 
     def transform(self):
+        """Transform data"""
+
         if self.rows:
             dimension_header = self.column_header["dimensions"]
             metric_header = self.column_header["metricHeader"]["metricHeaderEntries"]
@@ -102,6 +116,12 @@ class IReport(metaclass=ABCMeta):
             self.rows = rows
 
     def load(self):
+        """Load to staging table
+
+        Returns:
+            job (google.cloud.bigquery.job.LoadJob): Load job
+        """
+
         job = BQ_CLIENT.load_table_from_json(
             self.rows,
             f"{DATASET}._stage_{self.table}",
@@ -115,10 +135,18 @@ class IReport(metaclass=ABCMeta):
         return job
 
     def _load_callback(self, job):
+        """Callback func for load func
+
+        Args:
+            job (google.cloud.bigquery.job.LoadJob): Load job
+        """
+
         self._update()
         self.output_rows = job.result().output_rows
 
     def _update(self):
+        """Update data in the table to get the latest version"""
+
         query = f"""
         CREATE OR REPLACE TABLE {DATASET}.{self.table} AS
         SELECT
@@ -304,6 +332,17 @@ class Events(IReport):
 
 class UAJob:
     def __init__(self, headers, view_id, website, principal_content_type, start, end):
+        """Universal Analytics Report Job
+
+        Args:
+            headers (dict): HTTP Headers
+            view_id (str): View ID
+            website (str): Website
+            principal_content_type (str): Principal Content Type
+            start (str): Date
+            end (str): Date
+        """
+
         self.headers = headers
         self.view_id = view_id
         self.website = website
@@ -317,6 +356,16 @@ class UAJob:
         ]
 
     def _get_time_range(self, _start, _end):
+        """Generate time range
+
+        Args:
+            _start (str): Date
+            _end (str): Date
+
+        Returns:
+            (datetime.datetime, datetime.datetime): (start, end))
+        """
+
         if _start and _end:
             start, end = _start, _end
         else:
@@ -325,6 +374,12 @@ class UAJob:
         return start, end
 
     def _get(self):
+        """Get data through facade
+
+        Returns:
+            list: List of rows
+        """
+
         url = "https://analyticsreporting.googleapis.com/v4/reports:batchGet"
         with requests.Session() as session:
             while True:
@@ -352,14 +407,24 @@ class UAJob:
         return sum([len(report.rows) for report in self.reports])
 
     def _transform(self):
+        """Transform data through facade"""
+
         [report.transform() for report in self.reports]
 
     def _load(self):
+        """Load data through facade"""
+
         load_jobs = [report.load() for report in self.reports if report.rows]
         while [job for job in load_jobs if job.state not in ("DONE", "SUCCESS")]:
             time.sleep(5)
 
     def run(self):
+        """Run function
+
+        Returns:
+            dict: Job Response
+        """
+
         num_processed = self._get()
         response = {
             "view_id": self.view_id,
