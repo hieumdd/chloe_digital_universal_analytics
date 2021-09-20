@@ -5,15 +5,11 @@ from abc import abstractmethod, ABCMeta
 import requests
 
 from google.cloud import bigquery
-import jinja2
 
 NOW = datetime.utcnow()
 DATE_FORMAT = "%Y-%m-%d"
 
 PAGE_SIZE = 50000
-
-TEMPLATE_LOADER = jinja2.FileSystemLoader(searchpath="./templates")
-TEMPLATE_ENV = jinja2.Environment(loader=TEMPLATE_LOADER)
 
 BQ_CLIENT = bigquery.Client()
 DATASET = "GoogleAnalytics"
@@ -123,14 +119,27 @@ class IReport(metaclass=ABCMeta):
         self.output_rows = job.result().output_rows
 
     def _update(self):
-        template = TEMPLATE_ENV.get_template("update_from_stage.sql.j2")
-        rendered_query = template.render(
-            dataset=DATASET,
-            table=self.table,
-            p_key=",".join(self.dimensions),
-            incre_key="_batched_at",
-        )
-        BQ_CLIENT.query(rendered_query)
+        query = f"""
+        CREATE OR REPLACE TABLE {DATASET}.{self.table} AS
+        SELECT
+            *
+        EXCEPT
+            (row_num)
+        FROM
+            (
+                SELECT
+                    *,
+                    ROW_NUMBER() over (
+                        PARTITION BY {','.join(self.dimensions)}
+                        ORDER BY _batched_at DESC
+                    ) AS row_num
+                FROM
+                    {DATASET}._stage_{self.table}
+            )
+        WHERE
+            row_num = 1
+        """
+        BQ_CLIENT.query(query)
 
 
 class Demographics(IReport):
@@ -343,11 +352,9 @@ class UAJob:
         return sum([len(report.rows) for report in self.reports])
 
     def _transform(self):
-        self
         [report.transform() for report in self.reports]
 
     def _load(self):
-        zxz = [report for report in self.reports if report.rows]
         load_jobs = [report.load() for report in self.reports if report.rows]
         while [job for job in load_jobs if job.state not in ("DONE", "SUCCESS")]:
             time.sleep(5)
