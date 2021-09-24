@@ -124,7 +124,7 @@ class IReport(metaclass=ABCMeta):
 
         job = BQ_CLIENT.load_table_from_json(
             self.rows,
-            f"{DATASET}._stage_{self.table}",
+            f"{DATASET}.{self.table}",
             job_config=bigquery.LoadJobConfig(
                 schema=self.schema,
                 create_disposition="CREATE_IF_NEEDED",
@@ -162,7 +162,7 @@ class IReport(metaclass=ABCMeta):
                         ORDER BY _batched_at DESC
                     ) AS row_num
                 FROM
-                    {DATASET}._stage_{self.table}
+                    {DATASET}.{self.table}
             )
         WHERE
             row_num = 1
