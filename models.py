@@ -178,6 +178,7 @@ class Demographics(IReport):
         "deviceCategory",
         "userType",
         "country",
+        "userAgeBracket",
     ]
     metrics = [
         "users",
@@ -195,6 +196,7 @@ class Demographics(IReport):
         {"name": "channelGrouping", "type": "STRING"},
         {"name": "userType", "type": "STRING"},
         {"name": "country", "type": "STRING"},
+        {"name": "userAgeBracket", "type": "STRING"},
         {"name": "users", "type": "INTEGER"},
         {"name": "newUsers", "type": "INTEGER"},
         {"name": "sessionsPerUser", "type": "FLOAT"},
@@ -255,6 +257,7 @@ class Acquisitions(IReport):
         "socialNetwork",
         "fullReferrer",
         "pagePath",
+        "userAgeBracket",
     ]
     metrics = [
         "users",
@@ -274,6 +277,7 @@ class Acquisitions(IReport):
         {"name": "socialNetwork", "type": "STRING"},
         {"name": "fullReferrer", "type": "STRING"},
         {"name": "pagePath", "type": "STRING"},
+        {"name": "userAgeBracket", "type": "STRING"},
         {"name": "users", "type": "INTEGER"},
         {"name": "newUsers", "type": "INTEGER"},
         {"name": "sessions", "type": "INTEGER"},
@@ -297,6 +301,7 @@ class Events(IReport):
         "channelGrouping",
         "eventCategory",
         "eventAction",
+        "userAgeBracket",
     ]
     metrics = [
         "users",
@@ -315,6 +320,7 @@ class Events(IReport):
         {"name": "channelGrouping", "type": "STRING"},
         {"name": "eventCategory", "type": "STRING"},
         {"name": "eventAction", "type": "STRING"},
+        {"name": "userAgeBracket", "type": "STRING"},
         {"name": "users", "type": "INTEGER"},
         {"name": "newUsers", "type": "INTEGER"},
         {"name": "sessions", "type": "INTEGER"},
