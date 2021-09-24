@@ -178,7 +178,7 @@ class Demographics(IReport):
         "deviceCategory",
         "userType",
         "country",
-        "userAgeBracket",
+        "socialNetwork",
     ]
     metrics = [
         "users",
@@ -196,7 +196,7 @@ class Demographics(IReport):
         {"name": "channelGrouping", "type": "STRING"},
         {"name": "userType", "type": "STRING"},
         {"name": "country", "type": "STRING"},
-        {"name": "userAgeBracket", "type": "STRING"},
+        {"name": "socialNetwork", "type": "STRING"},
         {"name": "users", "type": "INTEGER"},
         {"name": "newUsers", "type": "INTEGER"},
         {"name": "sessionsPerUser", "type": "FLOAT"},
@@ -218,6 +218,7 @@ class Ages(IReport):
         "channelGrouping",
         "deviceCategory",
         "userAgeBracket",
+        "socialNetwork",
     ]
     metrics = [
         "users",
@@ -234,6 +235,7 @@ class Ages(IReport):
         {"name": "deviceCategory", "type": "STRING"},
         {"name": "channelGrouping", "type": "STRING"},
         {"name": "userAgeBracket", "type": "STRING"},
+        {"name": "socialNetwork", "type": "STRING"},
         {"name": "users", "type": "INTEGER"},
         {"name": "newUsers", "type": "INTEGER"},
         {"name": "sessionsPerUser", "type": "FLOAT"},
@@ -257,7 +259,6 @@ class Acquisitions(IReport):
         "socialNetwork",
         "fullReferrer",
         "pagePath",
-        "userAgeBracket",
     ]
     metrics = [
         "users",
@@ -277,7 +278,6 @@ class Acquisitions(IReport):
         {"name": "socialNetwork", "type": "STRING"},
         {"name": "fullReferrer", "type": "STRING"},
         {"name": "pagePath", "type": "STRING"},
-        {"name": "userAgeBracket", "type": "STRING"},
         {"name": "users", "type": "INTEGER"},
         {"name": "newUsers", "type": "INTEGER"},
         {"name": "sessions", "type": "INTEGER"},
@@ -301,7 +301,50 @@ class Events(IReport):
         "channelGrouping",
         "eventCategory",
         "eventAction",
+        "socialNetwork",
+    ]
+    metrics = [
+        "users",
+        "newUsers",
+        "sessions",
+        "pageviews",
+        "avgSessionDuration",
+        "bounceRate",
+        "avgTimeOnPage",
+        "totalEvents",
+        "uniqueEvents",
+    ]
+    schema = [
+        {"name": "date", "type": "STRING"},
+        {"name": "deviceCategory", "type": "STRING"},
+        {"name": "channelGrouping", "type": "STRING"},
+        {"name": "eventCategory", "type": "STRING"},
+        {"name": "eventAction", "type": "STRING"},
+        {"name": "socialNetwork", "type": "STRING"},
+        {"name": "users", "type": "INTEGER"},
+        {"name": "newUsers", "type": "INTEGER"},
+        {"name": "sessions", "type": "INTEGER"},
+        {"name": "pageviews", "type": "INTEGER"},
+        {"name": "avgSessionDuration", "type": "FLOAT"},
+        {"name": "bounceRate", "type": "FLOAT"},
+        {"name": "avgTimeOnPage", "type": "FLOAT"},
+        {"name": "totalEvents", "type": "INTEGER"},
+        {"name": "uniqueEvents", "type": "INTEGER"},
+        {"name": "_website", "type": "STRING"},
+        {"name": "_principal_content_type", "type": "STRING"},
+        {"name": "_batched_at", "type": "TIMESTAMP"},
+    ]
+
+class EventsAge(IReport):
+    report = "EventsAge"
+    dimensions = [
+        "date",
+        "deviceCategory",
+        "channelGrouping",
+        "eventCategory",
+        "eventAction",
         "userAgeBracket",
+        "socialNetwork",
     ]
     metrics = [
         "users",
@@ -321,6 +364,7 @@ class Events(IReport):
         {"name": "eventCategory", "type": "STRING"},
         {"name": "eventAction", "type": "STRING"},
         {"name": "userAgeBracket", "type": "STRING"},
+        {"name": "socialNetwork", "type": "STRING"},
         {"name": "users", "type": "INTEGER"},
         {"name": "newUsers", "type": "INTEGER"},
         {"name": "sessions", "type": "INTEGER"},
@@ -334,6 +378,7 @@ class Events(IReport):
         {"name": "_principal_content_type", "type": "STRING"},
         {"name": "_batched_at", "type": "TIMESTAMP"},
     ]
+
 
 
 class UAJob:
@@ -359,6 +404,7 @@ class UAJob:
             Ages(self),
             Acquisitions(self),
             Events(self),
+            EventsAge(self),
         ]
 
     def _get_time_range(self, _start, _end):
