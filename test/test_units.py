@@ -44,8 +44,7 @@ def run(data):
 )
 def test_units(data):
     res = run(data)
-    results = res["results"]
-    for i in results["reports"]:
+    for i in res["reports"]:
         assert i["num_processed"] >= 0
         if i["num_processed"] > 0:
             assert i["output_rows"] == i["num_processed"]
@@ -66,5 +65,4 @@ def test_units(data):
 )
 def test_tasks(data):
     res = run(data)
-    results = res["results"]
-    assert results["messages_sent"] > 0
+    assert res["messages_sent"] > 0
